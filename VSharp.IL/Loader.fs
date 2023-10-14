@@ -498,6 +498,17 @@ module Loader =
             "System.Boolean System.Double.TryParse(System.String, System.Double&)"
             "System.Boolean System.Single.TryParse(System.String, System.Single&)"
             "System.String System.Exception.GetStackTrace(this)"
+
+            // ASP.NET Core
+            // Configuration builder
+            "System.Void Microsoft.Extensions.Configuration.ConfigurationManager+ConfigurationSources.Add(this, Microsoft.Extensions.Configuration.IConfigurationSource)"
+
+            // Directory management
+            "System.String System.Environment.get_CurrentDirectory()"
+
+            // OS management
+            "System.Boolean System.OperatingSystem.IsOSPlatform(System.String)"
+            "System.String System.Globalization.CultureData.GetLocaleInfoEx(System.String, System.UInt32)"
         ]
 
     let internal isInvokeInternalCall (fullMethodName : string) =
