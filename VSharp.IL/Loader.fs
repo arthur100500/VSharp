@@ -276,6 +276,7 @@ module Loader =
 
             // Text
             "System.Int32 System.Text.UTF8Encoding.GetBytes(this, System.String, System.Int32, System.Int32, System.Byte[], System.Int32)"
+            "System.Boolean System.OperatingSystem.IsOSPlatform(System.String)"
 
             // Exceptions
             "System.String System.Exception.get_Source(this)"
@@ -287,21 +288,6 @@ module Loader =
             "System.Byte[] System.Reflection.AssemblyName.GetPublicKeyToken(this)"
             "System.Reflection.Assembly System.Reflection.Assembly.Load(System.Reflection.AssemblyName)"
             "System.Reflection.Assembly System.Reflection.Assembly.GetEntryAssembly()"
-            "System.Runtime.Loader.AssemblyLoadContext System.Runtime.Loader.AssemblyLoadContext.GetLoadContext(System.Reflection.Assembly)"
-            "System.Boolean System.Reflection.RuntimeAssembly.get_IsDynamic(this)"
-            "System.Boolean System.Reflection.Metadata.MetadataUpdater.IsApplyUpdateSupported()"
-            "System.Reflection.MethodInfo System.Type.GetMethod(this, System.String, System.Reflection.BindingFlags)"
-            "System.Reflection.FieldInfo System.Type.GetField(this, System.String)"
-
-            // DependencyInjection
-            "Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngine Microsoft.Extensions.DependencyInjection.ServiceProvider.GetEngine(this)"
-            "System.Void Microsoft.Extensions.DependencyInjection.ServiceProvider..ctor(this, System.Collections.Generic.ICollection`1[Microsoft.Extensions.DependencyInjection.ServiceDescriptor], Microsoft.Extensions.DependencyInjection.ServiceProviderOptions)"
-            "Microsoft.Extensions.DependencyInjection.ServiceProvider Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(Microsoft.Extensions.DependencyInjection.IServiceCollection, Microsoft.Extensions.DependencyInjection.ServiceProviderOptions)"
-            "Microsoft.Extensions.DependencyInjection.ServiceProvider Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(Microsoft.Extensions.DependencyInjection.IServiceCollection)"
-            "System.Void Microsoft.Extensions.DependencyInjection.ServiceLookup.CompiledServiceProviderEngine..ctor(this, Microsoft.Extensions.DependencyInjection.ServiceProvider)"
-            "System.Void Microsoft.Extensions.DependencyInjection.ServiceLookup.DynamicServiceProviderEngine..ctor(this, Microsoft.Extensions.DependencyInjection.ServiceProvider)"
-            "System.Object Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(this, System.Type)"
-            "Microsoft.Extensions.DependencyInjection.IServiceScope Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(System.IServiceProvider)"
 
             // Activator
             "T System.Activator.CreateInstance()"
@@ -321,11 +307,6 @@ module Loader =
             "System.Globalization.CultureInfo System.Globalization.CultureInfo.GetCultureInfo(System.String)"
             "System.Globalization.CultureData System.Globalization.CultureData.GetCultureData(System.String, System.Boolean)"
             "System.String System.Globalization.CultureInfo.GetUserDefaultLocaleName()"
-            "System.String System.Globalization.CultureData.GetLocaleInfoEx(System.String, System.UInt32)"
-            "System.Globalization.CultureData System.Globalization.CultureData.get_Invariant()"
-            "System.Globalization.CalendarData System.Globalization.CalendarData.CreateInvariant()"
-            "System.Object System.Globalization.CultureInfo.GetFormat(this, System.Type)"
-            "System.Void System.Globalization.CultureInfo..ctor(this, System.Globalization.CultureData, System.Boolean)"
 
             // ResourceManager
             "System.Void System.Resources.ResourceManager..ctor(this, System.String, System.Reflection.Assembly)"
@@ -348,19 +329,6 @@ module Loader =
 
             // FileSystem
             "System.String System.IO.FileSystemInfo.get_LinkTarget(this)"
-            "System.String System.Environment.get_CurrentDirectory()"
-            // TODO: should be extern mocked
-            "System.Boolean System.IO.Directory.Exists(System.String)"
-
-            // EventSource
-            "System.String System.Diagnostics.Tracing.EventSource.GetName(System.Type)"
-            "System.Void Microsoft.Extensions.Logging.EventSource.LoggingEventSource..ctor(this)"
-            "System.Void System.Diagnostics.DiagnosticSourceEventSource..ctor(this)"
-            "System.Void System.Diagnostics.Tracing.NativeRuntimeEventSource..ctor(this)"
-            "System.Void System.Diagnostics.Tracing.EventSource..ctor(this, System.Guid, System.String)"
-            "System.Void System.Diagnostics.Tracing.EventSource.Initialize(this, System.Guid, System.String, System.String[])"
-            "System.Void System.Diagnostics.Tracing.EventSource..ctor(this, System.String)"
-            "System.Void Microsoft.EntityFrameworkCore.Infrastructure.EntityFrameworkEventSource..ctor(this)"
 
             // VSharp
             "System.Int32 IntegrationTests.ExceptionsControlFlow.ConcreteThrow()"
@@ -502,13 +470,6 @@ module Loader =
             // ASP.NET Core
             // Configuration builder
             "System.Void Microsoft.Extensions.Configuration.ConfigurationManager+ConfigurationSources.Add(this, Microsoft.Extensions.Configuration.IConfigurationSource)"
-
-            // Directory management
-            "System.String System.Environment.get_CurrentDirectory()"
-
-            // OS management
-            "System.Boolean System.OperatingSystem.IsOSPlatform(System.String)"
-            "System.String System.Globalization.CultureData.GetLocaleInfoEx(System.String, System.UInt32)"
         ]
 
     let internal isInvokeInternalCall (fullMethodName : string) =
