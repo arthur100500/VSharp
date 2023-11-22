@@ -27,7 +27,7 @@ type callStack =
                 sb <- sb.AppendLine $"{stackKey} -> {entryString}"
         sb.ToString()
 
-module internal CallStack =
+module public CallStack =
 
     let empty = { frames = Stack.empty }
     let isEmpty (stack : callStack) = Stack.isEmpty stack.frames
