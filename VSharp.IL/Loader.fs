@@ -534,6 +534,9 @@ module Loader =
             // ConcurrentDictionary
             "System.Boolean System.Collections.Concurrent.ConcurrentDictionary`2[TKey,TValue].TryAdd(this, System.Type, System.Object[])"
 
+            // ConcurrentDictionary
+            "System.Boolean System.Collections.Concurrent.ConcurrentDictionary`2[TKey,TValue].TryAdd(this, System.Type, System.Object[])"
+
             // Hashtable
             "System.Void System.Collections.Hashtable..ctor(this)"
             "System.Void System.Collections.Hashtable.rehash(this, System.Int32)"
@@ -670,6 +673,7 @@ module Loader =
             "Microsoft.Extensions.DependencyInjection.IServiceCollection Microsoft.AspNetCore.Builder.WebApplicationBuilder.get_Services(this)"
             "System.IServiceProvider Microsoft.AspNetCore.Builder.ApplicationBuilder.GetProperty(this, System.String)"
             "System.IServiceProvider Microsoft.AspNetCore.Builder.ApplicationBuilder.get_ApplicationServices(this)"
+            "Microsoft.Extensions.DependencyInjection.IServiceCollection Microsoft.AspNetCore.Builder.WebApplicationBuilder.get_Services(this)"
 
             // ConfigurationManager
             "System.Void Microsoft.Extensions.Configuration.ConfigurationManager.ReloadSources(this)"
