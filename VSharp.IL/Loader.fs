@@ -534,9 +534,6 @@ module Loader =
             // ConcurrentDictionary
             "System.Boolean System.Collections.Concurrent.ConcurrentDictionary`2[TKey,TValue].TryAdd(this, System.Type, System.Object[])"
 
-            // ConcurrentDictionary
-            "System.Boolean System.Collections.Concurrent.ConcurrentDictionary`2[TKey,TValue].TryAdd(this, System.Type, System.Object[])"
-
             // Hashtable
             "System.Void System.Collections.Hashtable..ctor(this)"
             "System.Void System.Collections.Hashtable.rehash(this, System.Int32)"
