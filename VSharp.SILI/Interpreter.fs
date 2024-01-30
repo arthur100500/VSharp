@@ -274,7 +274,7 @@ module internal InstructionsSet =
             else Types.Cast parameter parInfo.ParameterType
         Seq.map2 castParameter (List.rev parameters) method.Parameters |> List.ofSeq
 
-    let makeUnsignedInteger term k =
+    let commonMakeUnsignedInteger (unsignedType : Type option) term k =
         match TypeOf term with
         | Types.Bool -> k <| Types.Cast term TypeUtils.uint32Type
         | t when t = typeof<double> || t = typeof<float> -> k term
@@ -282,6 +282,12 @@ module internal InstructionsSet =
             let unsignedType = TypeUtils.signedToUnsigned t
             k <| Types.Cast term unsignedType // no specs found about overflows
         | _ -> k term
+
+    let makeUnsignedInteger term k =
+        commonMakeUnsignedInteger None term k
+
+    let makeUnsignedIntegerWithType t term k =
+        commonMakeUnsignedInteger (Some t) term k
 
     let performUnsignedIntegerOperation op (cilState : cilState) =
         let arg2, arg1 = cilState.Peek2()
