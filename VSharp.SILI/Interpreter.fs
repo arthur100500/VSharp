@@ -1972,6 +1972,11 @@ type ILInterpreter() as this =
         let exit m =
             x.DecrementMethodLevel cilState m
             Logger.info $"Done with method {m}"
+            let elapsed = cilState.GetElapsedAndStop(m)
+            match elapsed with
+            | Some time when time.TotalSeconds > 10 ->
+                Logger.info $"{m.FullGenericMethodName}: {time.TotalSeconds} seconds"
+            | _ -> ()
             match cilState.ipStack with
             | [ Exit _ ] -> ()
             | Exit m :: _ when m.IsStaticConstructor ->
@@ -1985,7 +1990,9 @@ type ILInterpreter() as this =
             // Normal execution
             // Also on entering try block we push new exception register
             | Instruction(offset, m) ->
-                if offset = 0<offsets> then Logger.info $"Starting to explore method {m}"
+                if offset = 0<offsets> then
+                    cilState.AddStopwatch(m)
+                    Logger.info $"Starting to explore method {m}"
                 x.PushExceptionRegisterIfNeeded cilState m offset
                 x.ExecuteInstruction m offset cilState |> k
             // Exiting method
