@@ -72,6 +72,8 @@ module API =
         val TypeOfAddress : state -> term -> Type
 
         val GetHashCode : term -> term
+        val JsonSerialize : term -> term
+        val JsonDeserialize : term -> term
 
         val ReinterpretConcretes : term list -> Type -> obj
 

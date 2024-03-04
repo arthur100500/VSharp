@@ -81,3 +81,6 @@ module internal Delegate =
             (fun cilState k -> cilState.Push source; List.singleton cilState |> k)
             nullCheck
             id
+
+    let CreateDelegate (_ : IInterpreter) (_ : cilState) (_ : term list) : cilState list =
+        internalfail("not implemented")
