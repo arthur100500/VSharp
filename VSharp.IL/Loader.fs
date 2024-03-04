@@ -280,6 +280,20 @@ module Loader =
             "System.Boolean System.RuntimeType.get_IsEnum(this)"
             "System.Reflection.ConstructorInfo System.Type.GetConstructor(this, System.Type[])"
             "System.Reflection.ConstructorInfo System.Type.GetConstructor(this, System.Reflection.BindingFlags, System.Reflection.Binder, System.Type[], System.Reflection.ParameterModifier[])"
+            "System.Attribute System.Reflection.CustomAttributeExtensions.GetCustomAttribute(System.Reflection.ParameterInfo, System.Type, System.Boolean)"
+            "System.Object[] System.Reflection.RuntimeParameterInfo.GetCustomAttributes(this, System.Type, System.Boolean)"
+            "System.Reflection.MethodInfo System.Type.GetMethod(this, System.String, System.Reflection.BindingFlags, System.Type[])"
+            "System.Type System.RuntimeType.MakeGenericType(this, System.Type[])"
+            "System.Boolean System.RuntimeType.IsDelegate(this)"
+            "System.Delegate System.Reflection.RuntimeMethodInfo.CreateDelegate(this, System.Type)"
+            "System.Reflection.MethodInfo System.Reflection.RuntimeMethodInfo.MakeGenericMethod(this, System.Type[])"
+            "System.RuntimeType[] System.Reflection.RuntimeMethodInfo.GetGenericArgumentsInternal(this)"
+            "System.RuntimeTypeHandle System.RuntimeType.get_TypeHandle(this)"
+            "System.Reflection.ConstructorInfo[] System.RuntimeType.GetConstructors(this, System.Reflection.BindingFlags)"
+            "System.Reflection.ConstructorInfo[] System.Type.GetConstructors(this)"
+            "System.Boolean System.RuntimeType.get_IsEnum(this)"
+            "System.Reflection.ConstructorInfo System.Type.GetConstructor(this, System.Type[])"
+            "System.Reflection.ConstructorInfo System.Type.GetConstructor(this, System.Reflection.BindingFlags, System.Reflection.Binder, System.Type[], System.Reflection.ParameterModifier[])"
 
             // Object
             "System.Object System.Object.MemberwiseClone(this)"
@@ -401,6 +415,21 @@ module Loader =
             "System.Reflection.FieldInfo System.Type.GetField(this, System.String)"
             "System.Type System.Reflection.RuntimePropertyInfo.get_PropertyType(this)"
             "System.Reflection.PropertyInfo[] System.RuntimeType.GetProperties(this, System.Reflection.BindingFlags)"
+            "System.Reflection.ParameterInfo[] System.Dynamic.Utils.TypeExtensions.GetParametersCached(System.Reflection.MethodBase)"
+            "System.Reflection.ParameterInfo[] System.Dynamic.Utils.ExpressionUtils.GetParametersForValidation(System.Reflection.MethodBase, System.Linq.Expressions.ExpressionType)"
+            "System.Reflection.ParameterInfo[] System.Linq.Expressions.Expression.GetParametersForValidation(System.Reflection.MethodBase, System.Linq.Expressions.ExpressionType)"
+            "System.Reflection.ParameterInfo[] System.Linq.Expressions.Expression.ValidateMethodAndGetParameters(System.Linq.Expressions.Expression, System.Reflection.MethodInfo)"
+            "System.Linq.Expressions.MethodCallExpression System.Linq.Expressions.Expression.Call(System.Linq.Expressions.Expression, System.Reflection.MethodInfo, System.Linq.Expressions.Expression)"
+            "System.Reflection.MethodInfo System.Type.GetMethod(this, System.String, System.Type[])"
+            "Microsoft.Extensions.DependencyInjection.ObjectFactory Microsoft.Extensions.DependencyInjection.ActivatorUtilities.CreateFactory(System.Type, System.Type[])"
+            "System.Boolean System.Reflection.RuntimeConstructorInfo.IsDefined(this, System.Type, System.Boolean)"
+            "System.Boolean System.Attribute.IsDefined(System.Reflection.MemberInfo, System.Type, System.Boolean)"
+            "System.Boolean System.Attribute.IsDefined(System.Reflection.MemberInfo, System.Type)"
+            "System.Boolean System.Reflection.CustomAttributeExtensions.IsDefined(System.Reflection.MemberInfo, System.Type)"
+            "System.Reflection.ParameterInfo[] System.Reflection.RuntimeMethodInfo.FetchNonReturnParameters(this)"
+            "System.Reflection.ParameterInfo[] System.Reflection.RuntimeMethodInfo.GetParameters(this)"
+            "System.Attribute[] System.Attribute.GetCustomAttributes(System.Reflection.MemberInfo, System.Boolean)"
+            "System.Attribute[] System.Attribute.GetCustomAttributes(System.Reflection.MemberInfo)"
 
             // Activator
             "T System.Activator.CreateInstance()"
@@ -665,6 +694,30 @@ module Loader =
 
             // Task
             "System.Void System.Threading.Tasks.TaskCompletionSource`1[Microsoft.AspNetCore.Routing.Matching.Matcher].SetResult(this, Microsoft.AspNetCore.Routing.Matching.Matcher)"
+            "System.Void System.Threading.Tasks.Task.RunSynchronously(this)"
+            // TaskWaiter
+            "System.Void System.Runtime.CompilerServices.TaskAwaiter.ValidateEnd(System.Threading.Tasks.Task)"
+            // TextWriter
+            "System.Void System.IO.TextWriter..ctor(this, System.IFormatProvider)"
+
+            // StreamWriter
+            "System.Void System.IO.StreamWriter..ctor(this, System.IO.Stream, System.Text.Encoding, System.Int32, System.Boolean)"
+            "System.Void System.IO.StreamWriter..ctor(this, System.IO.Stream)"
+            "System.Void System.IO.StreamWriter.Write(this, System.String)"
+
+            // Stream
+            "System.Int64 System.IO.MemoryStream.get_Position(this)"
+
+            // Encoder
+            "System.Text.Encoder System.Text.UTF8Encoding.GetEncoder(this)"
+            "System.Void System.IO.StreamWriter.Flush(this)"
+            "System.Void System.Text.UTF8Encoding..ctor(this, System.Boolean)"
+
+            // Encoding
+            "System.Byte[] System.Text.Encoding.GetBytes(this, System.String)"
+
+            // Task
+            "System.Void System.Threading.Tasks.TaskCompletionSource`1[Microsoft.AspNetCore.Routing.Matching.Matcher].SetResult(this, Microsoft.AspNetCore.Routing.Matching.Matcher)"
 
             // TaskWaiter
             "System.Void System.Runtime.CompilerServices.TaskAwaiter.ValidateEnd(System.Threading.Tasks.Task)"
@@ -709,6 +762,65 @@ module Loader =
             "System.Void Microsoft.Extensions.DependencyInjection.ServiceLookup.DynamicServiceProviderEngine..ctor(this, Microsoft.Extensions.DependencyInjection.ServiceProvider)"
             "System.Object Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(this, System.Type)"
             "Microsoft.Extensions.DependencyInjection.IServiceScope Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(System.IServiceProvider)"
+            "Microsoft.Extensions.DependencyInjection.IMvcBuilder Microsoft.Extensions.DependencyInjection.MvcServiceCollectionExtensions.AddControllers(Microsoft.Extensions.DependencyInjection.IServiceCollection)"
+            "System.Object Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(this, System.Type, Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)"
+            "System.Object Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(this, System.Type)"
+            "System.Object Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(System.IServiceProvider, System.Type)"
+            "T Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService(System.IServiceProvider)"
+            "Microsoft.Extensions.DependencyInjection.IServiceCollection Microsoft.Extensions.DependencyInjection.ServiceCollectionHostedServiceExtensions.AddHostedService(Microsoft.Extensions.DependencyInjection.IServiceCollection)"
+            "System.Void Microsoft.Extensions.DependencyInjection.ServiceCollection.RemoveAt(this, System.Int32)"
+            "Microsoft.Extensions.DependencyInjection.IServiceCollection Microsoft.Extensions.DependencyInjection.RoutingServiceCollectionExtensions.AddRouting(Microsoft.Extensions.DependencyInjection.IServiceCollection)"
+
+            // Mvc
+            "System.Collections.Generic.IEnumerable`1[System.Reflection.TypeInfo] Microsoft.AspNetCore.Mvc.ApplicationParts.AssemblyPart.get_Types(this)"
+            "System.Collections.Generic.IEnumerable`1[System.Reflection.TypeInfo] Microsoft.AspNetCore.Mvc.ApplicationModels.ControllerActionDescriptorProvider.GetControllerTypes(this)"
+            "System.Void Microsoft.AspNetCore.Mvc.Routing.ActionEndpointDataSourceBase.Subscribe(this)"
+            "Microsoft.AspNetCore.Mvc.Filters.IFilterMetadata Microsoft.AspNetCore.Mvc.Infrastructure.ClientErrorResultFilterFactory.CreateInstance(this, System.IServiceProvider)"
+            "System.Void Microsoft.AspNetCore.Mvc.Filters.DefaultFilterProvider.ProvideFilter(Microsoft.AspNetCore.Mvc.Filters.FilterProviderContext, Microsoft.AspNetCore.Mvc.Filters.FilterItem)"
+            "System.ValueTuple`2[Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvokerCacheEntry,Microsoft.AspNetCore.Mvc.Filters.IFilterMetadata[]] Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvokerCache.GetCachedResult(this, Microsoft.AspNetCore.Mvc.ControllerContext)"
+            "System.Void Microsoft.AspNetCore.Mvc.MvcCoreDiagnosticListenerExtensions.BeforeControllerActionMethod(System.Diagnostics.DiagnosticListener, Microsoft.AspNetCore.Mvc.ActionContext, System.Collections.Generic.IReadOnlyDictionary`2[System.String,System.Object], System.Object)"
+            "System.Threading.Tasks.Task Microsoft.AspNetCore.Mvc.Routing.ControllerRequestDelegateFactory+<>c__DisplayClass12_0.<CreateRequestDelegate>b__0(this, Microsoft.AspNetCore.Http.HttpContext)"
+            "Microsoft.AspNetCore.Mvc.ModelBinding.ModelMetadata Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultModelMetadataProvider.GetMetadataForParameter(this, System.Reflection.ParameterInfo)"
+            "Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider+BinderItem[] Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider.GetParameterBindingInfo(Microsoft.AspNetCore.Mvc.ModelBinding.IModelBinderFactory, Microsoft.AspNetCore.Mvc.ModelBinding.IModelMetadataProvider, Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor)"
+            "Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegate Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider.CreateBinderDelegate(Microsoft.AspNetCore.Mvc.ModelBinding.ParameterBinder, Microsoft.AspNetCore.Mvc.ModelBinding.IModelBinderFactory, Microsoft.AspNetCore.Mvc.ModelBinding.IModelMetadataProvider, Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor, Microsoft.AspNetCore.Mvc.MvcOptions)"
+
+            // Http
+            "System.String Microsoft.AspNetCore.Http.HostString.ToUriComponent(this)"
+            "System.Void Microsoft.AspNetCore.Http.DefaultHttpContext.Initialize(this, Microsoft.AspNetCore.Http.Features.IFeatureCollection)"
+            "Microsoft.AspNetCore.Http.Endpoint Microsoft.AspNetCore.Http.EndpointHttpContextExtensions.GetEndpoint(Microsoft.AspNetCore.Http.HttpContext)"
+            "System.IServiceProvider Microsoft.AspNetCore.Http.DefaultHttpContext.get_RequestServices(this)"
+            "System.IServiceProvider Microsoft.AspNetCore.Http.Features.RequestServicesFeature.get_RequestServices(this)"
+            "System.Void Microsoft.AspNetCore.Http.DefaultHttpContext..ctor(this)"
+            "Microsoft.AspNetCore.Cors.Infrastructure.ICorsMetadata Microsoft.AspNetCore.Http.EndpointMetadataCollection.GetMetadata(this)"
+            "System.Void Microsoft.AspNetCore.Http.Features.HttpRequestFeature..ctor(this)"
+            "System.Collections.Generic.IDictionary`2[System.Object,System.Object] Microsoft.AspNetCore.Http.DefaultHttpContext.get_Items(this)"
+            "Microsoft.AspNetCore.Http.Features.IItemsFeature Microsoft.AspNetCore.Http.DefaultHttpContext.get_ItemsFeature(this)"
+            "Microsoft.AspNetCore.Http.PathString Microsoft.AspNetCore.Http.DefaultHttpRequest.get_Path(this)"
+            "Microsoft.AspNetCore.Http.Features.IHttpRequestFeature Microsoft.AspNetCore.Http.DefaultHttpRequest.get_HttpRequestFeature(this)"
+            "System.Int32 Microsoft.AspNetCore.Http.Features.FeatureCollection.get_Revision(this)"
+
+            // Features collection
+            "System.Object Microsoft.AspNetCore.Http.Features.FeatureCollection.get_Item(this, System.Type)"
+            "System.Void Microsoft.AspNetCore.Http.Features.FeatureCollection.set_Item(this, System.Type, System.Object)"
+            "Microsoft.AspNetCore.Http.Features.IEndpointFeature Microsoft.AspNetCore.Http.Features.FeatureCollection.Get(this)"
+
+            // Logger
+            "Microsoft.Extensions.Logging.ILogger Microsoft.Extensions.Logging.LoggerFactory.CreateLogger(this, System.String)"
+            "System.Void Microsoft.Extensions.Logging.Logger`1[Microsoft.AspNetCore.Routing.Matching.DfaMatcher]..ctor(this, Microsoft.Extensions.Logging.ILoggerFactory)"
+            "Microsoft.Extensions.Logging.ILogger Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider.CreateLogger(this, System.String)"
+            "System.Void Microsoft.Extensions.Logging.LoggerInformation..ctor(this, Microsoft.Extensions.Logging.ILoggerProvider, System.String)"
+            "Microsoft.AspNetCore.Routing.Matching.Matcher Microsoft.AspNetCore.Routing.Matching.DfaMatcherBuilder.Build(this)"
+            "Microsoft.AspNetCore.Routing.Matching.Matcher Microsoft.AspNetCore.Routing.Matching.DataSourceDependentMatcher.CreateMatcher(this, System.Collections.Generic.IReadOnlyList`1[Microsoft.AspNetCore.Http.Endpoint])"
+            "Microsoft.Extensions.Logging.ILogger`1[Microsoft.AspNetCore.Routing.Matching.DfaMatcher] Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger(Microsoft.Extensions.Logging.ILoggerFactory)"
+            "System.Void Microsoft.Extensions.Hosting.Internal.HostingLoggerExtensions.Starting(Microsoft.Extensions.Logging.ILogger)"
+            "System.Action`4[Microsoft.Extensions.Logging.ILogger,T1,T2,System.Exception] Microsoft.Extensions.Logging.LoggerMessage.Define(Microsoft.Extensions.Logging.LogLevel, Microsoft.Extensions.Logging.EventId, System.String, Microsoft.Extensions.Logging.LogDefineOptions)"
+            "System.Action`6[Microsoft.Extensions.Logging.ILogger,T1,T2,T3,T4,System.Exception] Microsoft.Extensions.Logging.LoggerMessage.Define(Microsoft.Extensions.Logging.LogLevel, Microsoft.Extensions.Logging.EventId, System.String, Microsoft.Extensions.Logging.LogDefineOptions)"
+            "System.Action`5[Microsoft.Extensions.Logging.ILogger,T1,T2,T3,System.Exception] Microsoft.Extensions.Logging.LoggerMessage.Define(Microsoft.Extensions.Logging.LogLevel, Microsoft.Extensions.Logging.EventId, System.String, Microsoft.Extensions.Logging.LogDefineOptions)"
+            "System.Action`3[Microsoft.Extensions.Logging.ILogger,T1,System.Exception] Microsoft.Extensions.Logging.LoggerMessage.Define(Microsoft.Extensions.Logging.LogLevel, Microsoft.Extensions.Logging.EventId, System.String, Microsoft.Extensions.Logging.LogDefineOptions)"
+            "System.Int32 Microsoft.Extensions.Logging.LogValuesFormatter.FindBraceIndex(System.String, System.Char, System.Int32, System.Int32)"
+            "System.Int32 Microsoft.Extensions.Logging.LogValuesFormatter.FindIndexOfAny(System.String, System.Char[], System.Int32, System.Int32)"
+            "Microsoft.Extensions.Logging.LogValuesFormatter Microsoft.Extensions.Logging.LoggerMessage.CreateLogValuesFormatter(System.String, System.Int32)"
+            "System.Void Microsoft.Extensions.Logging.LogValuesFormatter..ctor(this, System.String)"
             "Microsoft.Extensions.DependencyInjection.IMvcBuilder Microsoft.Extensions.DependencyInjection.MvcServiceCollectionExtensions.AddControllers(Microsoft.Extensions.DependencyInjection.IServiceCollection)"
             "System.Object Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(this, System.Type, Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope)"
             "System.Object Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngineScope.GetService(this, System.Type)"
@@ -827,6 +939,9 @@ module Loader =
             "System.Boolean System.Threading.Tasks.Task.TrySetException(this, System.Object)"
             "System.Void System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(System.Threading.Tasks.Task)"
             "System.Void System.Runtime.InteropServices.SafeHandle.InternalRelease(this, System.Boolean)"
+            "System.Text.Json.JsonEncodedText System.Text.Json.JsonEncodedText.Encode(System.String, System.Text.Encodings.Web.JavaScriptEncoder)"
+            "System.Object System.Activator.CreateInstance(System.Type)"
+            "Microsoft.Extensions.Internal.ObjectMethodExecutor Microsoft.Extensions.Internal.ObjectMethodExecutor.Create(System.Reflection.MethodInfo, System.Reflection.TypeInfo, System.Object[])"
         ]
 
     let internal isInvokeInternalCall (fullMethodName : string) =

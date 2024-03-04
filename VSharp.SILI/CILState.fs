@@ -108,7 +108,7 @@ module CilState =
             /// <summary>
             /// If the state is not isolated (produced during forward execution), Some of it's entry point method, else None.
             /// </summary>
-            entryMethod : Method option
+            mutable entryMethod : Method option
             /// <summary>
             /// Deterministic state id.
             /// </summary>

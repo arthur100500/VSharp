@@ -838,12 +838,26 @@ type ILInterpreter() as this =
                 | Some thisRef -> TryTermToFullyConcreteObj state thisRef
                 | None -> None
             if List.length objArgs = List.length termArgs && (not (Option.isSome thisOption) || (Option.isSome thisObj)) then
-                Logger.error $"{method.FullGenericMethodName} can be added"
+                Logger.warning $"{method.FullGenericMethodName} can be added"
             false
         else false
 
     member private x.StartAspNet (cilState : cilState) args =
         Logger.trace "Starting exploration of ASP.NET application"
+        Console.Clear()
+        // Get all controllers
+        // TODO: Get assemblies the normal way, not .[0]
+        let assemblies = AssemblyManager.GetAssemblies()
+        let executionAssembly = assemblies |> Seq.head
+        let controllerMethods =
+            executionAssembly.GetTypes()
+            |> Seq.filter (fun t -> t.BaseType.Name = "ControllerBase")
+            |> Seq.map (fun t -> t.GetMethods())
+            |> Seq.concat
+
+        let researchedController = controllerMethods |> Seq.head
+        let controllerParameters = researchedController.GetParameters()
+
         cilState.ClearStack()
         let state = cilState.state
         state.complete <- false
@@ -853,10 +867,13 @@ type ILInterpreter() as this =
         let requestDelegateType = MostConcreteTypeOfRef state requestDelegate
         let iHttpContextFactoryType = MostConcreteTypeOfRef state iHttpContextFactory
         let method =
-            Reflection.createAspNetStartMethod requestDelegateType iHttpContextFactoryType
+            Reflection.createAspNetStartMethod requestDelegateType iHttpContextFactoryType controllerParameters
             |> Application.getMethod
-        let pathArg = Memory.AllocateString "/api/get" state
-        let methodArg = Memory.AllocateString "GET" state
+        cilState.entryMethod <- Some method
+
+        let pathArg = Memory.AllocateString "/api/post" state
+        let methodArg = Memory.AllocateString "POST" state
+        let bodyArg = Memory.AllocateString "3" state
         let parameters = Some [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg; None]
         Memory.InitFunctionFrame state method None parameters
         state.model <- Memory.EmptyModel method
@@ -864,6 +881,9 @@ type ILInterpreter() as this =
         let bodyArgTerm = cilState.Read bodyArgRef
         // Adding non-null constraint for 'body' argument
         !!(IsNullReference bodyArgTerm) |> AddConstraint state
+        // Adding non-empty constraint for 'body' argument
+        let emptyString = Memory.AllocateEmptyString cilState.state (MakeNumber 0)
+        !!(emptyString === bodyArgTerm) |> AddConstraint state
         // Filling model with non-null 'body' to match PC
         let modelState =
             match state.model with

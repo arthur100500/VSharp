@@ -5,6 +5,7 @@ open System.Collections.Generic
 open System.Reflection
 open System.Reflection.Emit
 open System.Runtime.InteropServices
+open System.Text.Json
 
 [<CustomEquality; CustomComparison>]
 type methodDescriptor = {
@@ -708,11 +709,16 @@ module public Reflection =
         let assemblyBuilder = AssemblyManager.DefineDynamicAssembly(AssemblyName dynamicAssemblyName, AssemblyBuilderAccess.Run)
         assemblyBuilder.DefineDynamicModule dynamicAssemblyName)
 
-    let createAspNetStartMethod (requestDelegateType : Type) (iHttpContextFactoryType : Type) =
+    let createAspNetStartMethod (requestDelegateType : Type) (iHttpContextFactoryType : Type) (parameters : ParameterInfo array) =
         // Getting all needed types and assemblies
         let assemblies = AssemblyManager.GetAssemblies()
         let httpAssembly =
             assemblies |> Seq.find (fun a -> a.FullName.Contains("Microsoft.AspNetCore.Http,"))
+        let jsonAssembly =
+            assemblies |> Seq.find (fun a -> a.FullName.Contains("System.Text.Json,"))
+        let extensionsPrimitiveAssembly =
+            assemblies |> Seq.find (fun a -> a.FullName.Contains("Microsoft.Extensions.Primitives"))
+        let extensionsPrimitiveAssemblyTypes = extensionsPrimitiveAssembly.GetExportedTypes()
         let httpAssemblyTypes = httpAssembly.GetExportedTypes()
         let featuresAssembly =
             assemblies |> Seq.find (fun a -> a.FullName.Contains("Microsoft.Extensions.Features,"))
@@ -741,32 +747,46 @@ module public Reflection =
             let interfaces = streamResponseBodyFeatureType.GetInterfaces()
             assert(Array.length interfaces = 1)
             interfaces[0]
+        let stringValuesType =
+            extensionsPrimitiveAssemblyTypes |> Array.find (fun t -> t.Name = "StringValues")
         let memoryStreamType = typeof<System.IO.MemoryStream>
         let streamType = typeof<System.IO.Stream>
-        let streamWriterType = typeof<System.IO.StreamWriter>
 
         let typeName = $"AspNetStart{Guid.NewGuid()}"
         let typeBuilder = dynamicModule.Value.DefineType(typeName, typeAttributes.Value)
         let methodName = $"AspNetStartMethod{Guid.NewGuid()}"
         let methodBuilder = typeBuilder.DefineMethod(methodName, methodAttributes.Value)
-        methodBuilder.SetReturnType typeof<Void>
+
+        // Split controller arguments
+        // TODO: FromQuery, FromPath, FromHeaders etc
+        let bodyArgs, otherArgs =
+            parameters
+            |> Array.partition (fun x -> x.CustomAttributes |> Seq.tryFind (fun x -> x.AttributeType.Name.Contains("FromBody")) |> Option.isSome)
+
+        let bodyArgs : Type array = Array.map (fun (t : ParameterInfo)  -> t.ParameterType) bodyArgs
+
         // Setting arguments
-        methodBuilder.SetParameters([|
+        let parameterTypes = [|
             // RequestDelegate
             requestDelegateType
             // IHttpContextFactory
             iHttpContextFactoryType
-            // Path, Method, Body
-            typeof<string>; typeof<string>; typeof<string>
-        |])
+            // Path, Method
+            typeof<string>; typeof<string>
+        |]
+
+        let parameterTypes = Array.concat [parameterTypes; bodyArgs]
+
+        methodBuilder.SetReturnType httpResponseFeatureType
+        methodBuilder.SetParameters(parameterTypes)
         let ilGenerator = methodBuilder.GetILGenerator()
 
         // Declaring local variables
         let memoryStreamLocal = ilGenerator.DeclareLocal(memoryStreamType)
-        let streamWriterLocal = ilGenerator.DeclareLocal(streamWriterType)
         let featureCollectionLocal = ilGenerator.DeclareLocal(featureCollectionType)
         let httpRequestFeatureLocal = ilGenerator.DeclareLocal(httpRequestFeatureType)
         let httpResponseFeatureLocal = ilGenerator.DeclareLocal(httpResponseFeatureType)
+        let bodyArgumentLocal = ilGenerator.DeclareLocal(typeof<byte>)
         let httpResponseBodyFeatureLocal = ilGenerator.DeclareLocal(streamResponseBodyFeatureType)
         let contextLocal = ilGenerator.DeclareLocal(httpContextType)
 
@@ -775,22 +795,25 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Newobj, memoryStreamCtor)
         ilGenerator.Emit(OpCodes.Stloc, memoryStreamLocal)
 
-        // var streamWriterLocal = new StreamWriter(stream);
-        ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
-        let streamWriterCtor = streamWriterType.GetConstructor(Array.singleton memoryStreamType)
-        ilGenerator.Emit(OpCodes.Newobj, streamWriterCtor)
-        ilGenerator.Emit(OpCodes.Stloc, streamWriterLocal)
+        // bodyArgumentLocal = JsonSerializer.Serialize(bodyArg);
+        let jsonSerializerType = jsonAssembly.GetTypes() |> Array.find (fun x -> x.Name = "JsonSerializer")
 
-        // streamWriterLocal.Write(body);
-        ilGenerator.Emit(OpCodes.Ldloc, streamWriterLocal)
-        let writeMethod = streamWriterType.GetMethod("Write", instancePublicBindingFlags, Array.singleton typeof<string>)
+        let serializeMethod =
+            jsonSerializerType.GetMethods()
+            |> Array.find (fun x -> x.Name = "Serialize" && x.GetParameters().Length = 2 && x.GetParameters().[0].ParameterType.IsGenericParameter && x.IsGenericMethod)
+            |> (fun m -> m.MakeGenericMethod(bodyArgs))
+
         ilGenerator.Emit(OpCodes.Ldarg, 4)
-        ilGenerator.Emit(OpCodes.Callvirt, writeMethod)
+        ilGenerator.Emit(OpCodes.Ldnull)
+        ilGenerator.Emit(OpCodes.Call, serializeMethod)
+        ilGenerator.Emit(OpCodes.Stloc, bodyArgumentLocal)
 
-        // streamWriterLocal.Flush();
-        ilGenerator.Emit(OpCodes.Ldloc, streamWriterLocal)
-        let flushMethod = streamWriterType.GetMethod("Flush", instancePublicBindingFlags, Array.empty)
-        ilGenerator.Emit(OpCodes.Callvirt, flushMethod)
+        // memoryStreamLocal.WriteByte((byte)bodyArgumentLocal[0]);
+        let streamWriteByteMethod = memoryStreamType.BaseType.GetMethods() |> Array.find (fun x -> x.Name = "WriteByte")
+
+        ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
+        ilGenerator.Emit(OpCodes.Ldloc, bodyArgumentLocal)
+        ilGenerator.Emit(OpCodes.Callvirt, streamWriteByteMethod)
 
         // memoryStreamLocal.Position = 0;
         ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
@@ -809,6 +832,40 @@ module public Reflection =
         let httpRequestFeatureCtor = httpRequestFeatureType.GetConstructor(Array.empty)
         ilGenerator.Emit(OpCodes.Newobj, httpRequestFeatureCtor)
         ilGenerator.Emit(OpCodes.Stloc, httpRequestFeatureLocal)
+
+        // httpRequestFeature.Headers.Add("Content-Type", "application/json");
+        // httpRequestFeature.Headers.Add("Content-Length", "2");
+        // httpRequestFeature.Headers.Add("Host", "127.0.0.1:5070??");
+        // TODO: make symbolic headers
+        let featuresHeadersProperty = httpRequestFeatureType.GetProperty("Headers", instancePublicBindingFlags)
+        let getFeaturesHeadersProperty = featuresHeadersProperty.GetMethod
+        let headersType = featuresHeadersProperty.PropertyType
+        let iDictionaryType = headersType.GetInterfaces() |> Array.find (fun x -> x.FullName.Contains "IDictionary")
+        let dictionaryAdd = iDictionaryType.GetMethod("Add");
+
+        let stringValuesOpImplicit = stringValuesType.GetConstructors() |> Array.find (fun x -> x.GetParameters().Length = 1 && x.GetParameters().[0].ParameterType = typeof<string>)
+
+        ilGenerator.Emit(OpCodes.Ldloc, httpRequestFeatureLocal)
+        ilGenerator.Emit(OpCodes.Callvirt, getFeaturesHeadersProperty)
+        ilGenerator.Emit(OpCodes.Ldstr, "Content-Type")
+        ilGenerator.Emit(OpCodes.Ldstr, "application/json")
+        ilGenerator.Emit(OpCodes.Newobj, stringValuesOpImplicit)
+        ilGenerator.Emit(OpCodes.Callvirt, dictionaryAdd)
+
+        ilGenerator.Emit(OpCodes.Ldloc, httpRequestFeatureLocal)
+        ilGenerator.Emit(OpCodes.Callvirt, getFeaturesHeadersProperty)
+        ilGenerator.Emit(OpCodes.Ldstr, "Content-Length")
+        ilGenerator.Emit(OpCodes.Ldstr, "2")
+        ilGenerator.Emit(OpCodes.Newobj, stringValuesOpImplicit)
+        ilGenerator.Emit(OpCodes.Callvirt, dictionaryAdd)
+
+        ilGenerator.Emit(OpCodes.Ldloc, httpRequestFeatureLocal)
+        ilGenerator.Emit(OpCodes.Callvirt, getFeaturesHeadersProperty)
+        ilGenerator.Emit(OpCodes.Ldstr, "Host")
+        ilGenerator.Emit(OpCodes.Ldstr, "127.0.0.1:5000")
+        ilGenerator.Emit(OpCodes.Newobj, stringValuesOpImplicit)
+        ilGenerator.Emit(OpCodes.Callvirt, dictionaryAdd)
+
 
         // httpRequestFeatureLocal.Path = path;
         ilGenerator.Emit(OpCodes.Ldloc, httpRequestFeatureLocal)
@@ -895,6 +952,11 @@ module public Reflection =
         assert(waitMethod <> null)
         ilGenerator.Emit(OpCodes.Callvirt, waitMethod)
 
+        // Return FeatureCollection.Get<IHttpResponseFeature>()
+        ilGenerator.Emit(OpCodes.Ldloc, featureCollectionLocal)
+        let getResponseMethod = featureCollectionType.GetMethod("Get", instancePublicBindingFlags).MakeGenericMethod(iHttpResponseFeatureType)
+        assert(getResponseMethod <> null)
+        ilGenerator.Emit(OpCodes.Callvirt, getResponseMethod)
         ilGenerator.Emit(OpCodes.Ret)
 
         let t = typeBuilder.CreateType()

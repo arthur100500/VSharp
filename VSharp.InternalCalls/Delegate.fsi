@@ -13,3 +13,6 @@ module internal Delegate =
 
     [<Implements("System.Delegate System.Delegate.Remove(System.Delegate, System.Delegate)")>]
     val DelegateRemove : IInterpreter -> cilState -> term list -> cilState list
+
+    [<Implements("System.Delegate System.Reflection.RuntimeMethodInfo.CreateDelegate(this, System.Type)")>]
+    val CreateDelegate : IInterpreter -> cilState -> term list -> cilState list

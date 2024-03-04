@@ -87,6 +87,24 @@ module internal Memory =
         | HeapRef(address, _) -> createHashCodeConstant address
         | _ -> createHashCodeConstant object
 
+// ------------------------------- Serialization -------------------------------
+    [<StructuralEquality;NoComparison>]
+    type private jsonStringSource =
+        {object : term}
+        interface INonComposableSymbolicConstantSource with
+            override x.SubTerms = Seq.empty
+            override x.Time = VectorTime.zero
+            override x.TypeOfLocation = typeof<int32>
+
+    let jsonSerialize object =
+        let name = $"JsonByte({object})"
+        let source = {object = object}
+        Constant name source typeof<byte>
+
+    let jsonDeserialize object : term =
+        match object.term with
+        | _ -> failwith "Deserialize"
+
 // ------------------------------- Instantiation -------------------------------
 
     type [<CustomEquality;NoComparison>] regionPicker<'key, 'reg

@@ -1,6 +1,7 @@
 namespace VSharp.Explorer
 
 open System
+open System.Collections.Generic
 open System.IO
 open System.Reflection
 open System.Threading
@@ -134,7 +135,9 @@ type private SVMExplorer(explorationOptions: ExplorationOptions, statistics: SVM
     let reportIncomplete = reporter.ReportIIE
 
     let reportState (suite : testSuite) (cilState : cilState) =
-        if cilState.WebExploration then Logger.error "reportFinished" else
+        let debugRes = Memory.StateResult cilState.state
+        if debugRes <> Nop() then ()
+        if cilState.WebExploration then Logger.warning "reportFinished" else
         try
             let isNewHistory() =
                 let methodHistory = Set.filter (fun h -> h.method.InCoverageZone) cilState.history
@@ -189,6 +192,22 @@ type private SVMExplorer(explorationOptions: ExplorationOptions, statistics: SVM
 
     let reportFinished (state : cilState) =
         let result = Memory.StateResult state.state
+        // let o = Memory.Read state.state result
+        match result.term with
+        | HeapRef ({term=Concrete (r, _); hc=_}, _) ->
+            let concreteMemoryType = typeof<ConcreteMemory>
+            let typeType = concreteMemoryType.GetType()
+            let concreteMemoryFields = typeType.GetProperty("DeclaredFields").GetValue(concreteMemoryType) :?> FieldInfo array
+            let virtualToPhysField = concreteMemoryFields |> Array.find (fun x -> x.Name = "virtToPhys")
+            let virtualToPhys = virtualToPhysField.GetValue(state.state.concreteMemory)
+            let virtualToPhys = virtualToPhys :?> Dictionary<concreteHeapAddress, physicalAddress>
+            let elem = (virtualToPhys[r :?> concreteHeapAddress]).object :?> Microsoft.AspNetCore.Http.Features.HttpResponseFeature
+            elem.Body.Seek(0, SeekOrigin.Begin) |> ignore
+            let reader = new StreamReader(elem.Body)
+            printfn $"{elem.StatusCode} {reader.ReadToEnd()}"
+            ()
+        | _ ->
+            printfn "Result was not HeapRef"
         Logger.info $"Result of method {state.EntryMethod.FullName} is {result}"
         Application.terminateState state
         reportState Test state

@@ -120,6 +120,8 @@ module API =
         let IsBadRef term = Pointers.isBadRef term
 
         let GetHashCode term = Memory.getHashCode term
+        let JsonSerialize term = Memory.jsonSerialize term
+        let JsonDeserialize term = Memory.jsonDeserialize term
 
         let ReinterpretConcretes terms t = reinterpretConcretes terms t
 
