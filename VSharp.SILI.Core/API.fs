@@ -599,40 +599,40 @@ module API =
             Memory.markTypeInitialized state targetType
 
         let InitFunctionFrame state (method : IMethod) this paramValues =
-            let parameters = method.Parameters
-            let values, areParametersSpecified =
-                match paramValues with
-                | Some values -> values, true
-                | None -> [], false
+            let parameters = List.ofArray method.Parameters
+            let paramKeys = List.map ParameterKey parameters
+            let paramCount = List.length paramKeys
             let localVarsDecl (lvi : System.Reflection.LocalVariableInfo) =
                 let stackKey = LocalVariableKey(lvi, method)
-                (stackKey, lvi.LocalType |> DefaultOf |> Some, lvi.LocalType)
+                (stackKey, DefaultOf lvi.LocalType |> Some, lvi.LocalType)
             let locals =
                 match method.LocalVariables with
                 | null -> []
-                | lvs -> lvs |> Seq.map localVarsDecl |> Seq.toList
-            let valueOrFreshConst (param : System.Reflection.ParameterInfo option) value =
-                match param, value with
-                | None, _ -> internalfail "parameters list is longer than expected!"
-                | Some param, None ->
-                    let stackKey = ParameterKey param
-                    match areParametersSpecified with
-                    | true when param.HasDefaultValue ->
-                        let typ = param.ParameterType
-                        (stackKey, Some(Concrete param.DefaultValue typ), typ)
-                    | true -> internalfail "parameters list is shorter than expected!"
-                    | _ -> (stackKey, None, param.ParameterType)
-                | Some param, Some value -> (ParameterKey param, value, param.ParameterType)
-            let parameters = List.map2Different valueOrFreshConst parameters values
-            let parametersAndThis =
+                | lvs -> Seq.map localVarsDecl lvs |> Seq.toList
+            let getValues paramCount =
+                match paramValues with
+                | Some values ->
+                    assert(List.length values = paramCount)
+                    values
+                | None -> List.replicate paramCount None
+            let createStackEntry (stackKey : stackKey) (value : term option) =
+                (stackKey, value, stackKey.TypeOfLocation)
+            let hasThis = method.HasThis
+            let stackKeys, values =
                 match this with
-                | Some thisValue ->
-                    let thisKey = ThisKey method
-                    // TODO: incorrect type when ``this'' is Ref to stack
-                    (thisKey, Some thisValue, TypeOfLocation thisValue) :: parameters
-                | None -> parameters
-            NewStackFrame state (Some method) (parametersAndThis @ locals)
-
+                | None when hasThis -> internalfail "calling non-static function without 'this'"
+                | Some _ when hasThis ->
+                    let values = getValues paramCount
+                    ThisKey method :: paramKeys, this :: values
+                | Some _ ->
+                    // Case for delegates
+                    assert(paramCount > 0)
+                    let values = getValues (paramCount - 1)
+                    paramKeys, this :: values
+                | None -> paramKeys, getValues paramCount
+            assert(List.length stackKeys = List.length values)
+            let arguments = List.map2 createStackEntry stackKeys values
+            NewStackFrame state (Some method) (arguments @ locals)
         let AllocateTemporaryLocalVariable state index typ term =
             let tmpKey = TemporaryLocalVariableKey(typ, index)
             let ref = PrimitiveStackLocation tmpKey |> Ref
