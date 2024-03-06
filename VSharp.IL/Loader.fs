@@ -433,6 +433,7 @@ module Loader =
 
             // Activator
             "T System.Activator.CreateInstance()"
+            "System.Object System.Activator.CreateInstance(System.Type, System.Object[])"
 
             // Guid
             "System.Guid System.Guid.NewGuid()"
