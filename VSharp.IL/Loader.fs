@@ -430,6 +430,9 @@ module Loader =
             "System.Reflection.ParameterInfo[] System.Reflection.RuntimeMethodInfo.GetParameters(this)"
             "System.Attribute[] System.Attribute.GetCustomAttributes(System.Reflection.MemberInfo, System.Boolean)"
             "System.Attribute[] System.Attribute.GetCustomAttributes(System.Reflection.MemberInfo)"
+            "System.Reflection.RuntimeMethodInfo System.Reflection.RuntimePropertyInfo.GetSetMethod(this, System.Boolean)"
+            "System.Reflection.MethodInfo System.Reflection.PropertyInfo.get_SetMethod(this)"
+            "System.Object System.Reflection.MethodBase.Invoke(this, System.Object, System.Object[])"
 
             // Activator
             "T System.Activator.CreateInstance()"
@@ -784,6 +787,7 @@ module Loader =
             "Microsoft.AspNetCore.Mvc.ModelBinding.ModelMetadata Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultModelMetadataProvider.GetMetadataForParameter(this, System.Reflection.ParameterInfo)"
             "Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider+BinderItem[] Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider.GetParameterBindingInfo(Microsoft.AspNetCore.Mvc.ModelBinding.IModelBinderFactory, Microsoft.AspNetCore.Mvc.ModelBinding.IModelMetadataProvider, Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor)"
             "Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegate Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider.CreateBinderDelegate(Microsoft.AspNetCore.Mvc.ModelBinding.ParameterBinder, Microsoft.AspNetCore.Mvc.ModelBinding.IModelBinderFactory, Microsoft.AspNetCore.Mvc.ModelBinding.IModelMetadataProvider, Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor, Microsoft.AspNetCore.Mvc.MvcOptions)"
+            "System.Threading.Tasks.Task Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.InvokeAsync(this)"
 
             // Http
             "System.String Microsoft.AspNetCore.Http.HostString.ToUriComponent(this)"
@@ -830,53 +834,6 @@ module Loader =
             "Microsoft.Extensions.DependencyInjection.IServiceCollection Microsoft.Extensions.DependencyInjection.ServiceCollectionHostedServiceExtensions.AddHostedService(Microsoft.Extensions.DependencyInjection.IServiceCollection)"
             "System.Void Microsoft.Extensions.DependencyInjection.ServiceCollection.RemoveAt(this, System.Int32)"
             "Microsoft.Extensions.DependencyInjection.IServiceCollection Microsoft.Extensions.DependencyInjection.RoutingServiceCollectionExtensions.AddRouting(Microsoft.Extensions.DependencyInjection.IServiceCollection)"
-
-            // Mvc
-            "System.Collections.Generic.IEnumerable`1[System.Reflection.TypeInfo] Microsoft.AspNetCore.Mvc.ApplicationParts.AssemblyPart.get_Types(this)"
-            "System.Collections.Generic.IEnumerable`1[System.Reflection.TypeInfo] Microsoft.AspNetCore.Mvc.ApplicationModels.ControllerActionDescriptorProvider.GetControllerTypes(this)"
-            "System.Void Microsoft.AspNetCore.Mvc.Routing.ActionEndpointDataSourceBase.Subscribe(this)"
-            "Microsoft.AspNetCore.Mvc.Filters.IFilterMetadata Microsoft.AspNetCore.Mvc.Infrastructure.ClientErrorResultFilterFactory.CreateInstance(this, System.IServiceProvider)"
-            "System.Void Microsoft.AspNetCore.Mvc.Filters.DefaultFilterProvider.ProvideFilter(Microsoft.AspNetCore.Mvc.Filters.FilterProviderContext, Microsoft.AspNetCore.Mvc.Filters.FilterItem)"
-            "System.ValueTuple`2[Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvokerCacheEntry,Microsoft.AspNetCore.Mvc.Filters.IFilterMetadata[]] Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvokerCache.GetCachedResult(this, Microsoft.AspNetCore.Mvc.ControllerContext)"
-            "System.Void Microsoft.AspNetCore.Mvc.MvcCoreDiagnosticListenerExtensions.BeforeControllerActionMethod(System.Diagnostics.DiagnosticListener, Microsoft.AspNetCore.Mvc.ActionContext, System.Collections.Generic.IReadOnlyDictionary`2[System.String,System.Object], System.Object)"
-
-            // Http
-            "System.String Microsoft.AspNetCore.Http.HostString.ToUriComponent(this)"
-            "System.Void Microsoft.AspNetCore.Http.DefaultHttpContext.Initialize(this, Microsoft.AspNetCore.Http.Features.IFeatureCollection)"
-            "Microsoft.AspNetCore.Http.Endpoint Microsoft.AspNetCore.Http.EndpointHttpContextExtensions.GetEndpoint(Microsoft.AspNetCore.Http.HttpContext)"
-            "System.IServiceProvider Microsoft.AspNetCore.Http.DefaultHttpContext.get_RequestServices(this)"
-            "System.IServiceProvider Microsoft.AspNetCore.Http.Features.RequestServicesFeature.get_RequestServices(this)"
-            "System.Void Microsoft.AspNetCore.Http.DefaultHttpContext..ctor(this)"
-            "Microsoft.AspNetCore.Cors.Infrastructure.ICorsMetadata Microsoft.AspNetCore.Http.EndpointMetadataCollection.GetMetadata(this)"
-            "System.Void Microsoft.AspNetCore.Http.Features.HttpRequestFeature..ctor(this)"
-            "System.Collections.Generic.IDictionary`2[System.Object,System.Object] Microsoft.AspNetCore.Http.DefaultHttpContext.get_Items(this)"
-            "Microsoft.AspNetCore.Http.Features.IItemsFeature Microsoft.AspNetCore.Http.DefaultHttpContext.get_ItemsFeature(this)"
-            "Microsoft.AspNetCore.Http.PathString Microsoft.AspNetCore.Http.DefaultHttpRequest.get_Path(this)"
-            "Microsoft.AspNetCore.Http.Features.IHttpRequestFeature Microsoft.AspNetCore.Http.DefaultHttpRequest.get_HttpRequestFeature(this)"
-            "System.Int32 Microsoft.AspNetCore.Http.Features.FeatureCollection.get_Revision(this)"
-
-            // Features collection
-            "System.Object Microsoft.AspNetCore.Http.Features.FeatureCollection.get_Item(this, System.Type)"
-            "System.Void Microsoft.AspNetCore.Http.Features.FeatureCollection.set_Item(this, System.Type, System.Object)"
-            "Microsoft.AspNetCore.Http.Features.IEndpointFeature Microsoft.AspNetCore.Http.Features.FeatureCollection.Get(this)"
-
-            // Logger
-            "Microsoft.Extensions.Logging.ILogger Microsoft.Extensions.Logging.LoggerFactory.CreateLogger(this, System.String)"
-            "System.Void Microsoft.Extensions.Logging.Logger`1[Microsoft.AspNetCore.Routing.Matching.DfaMatcher]..ctor(this, Microsoft.Extensions.Logging.ILoggerFactory)"
-            "Microsoft.Extensions.Logging.ILogger Microsoft.Extensions.Logging.Console.ConsoleLoggerProvider.CreateLogger(this, System.String)"
-            "System.Void Microsoft.Extensions.Logging.LoggerInformation..ctor(this, Microsoft.Extensions.Logging.ILoggerProvider, System.String)"
-            "Microsoft.AspNetCore.Routing.Matching.Matcher Microsoft.AspNetCore.Routing.Matching.DfaMatcherBuilder.Build(this)"
-            "Microsoft.AspNetCore.Routing.Matching.Matcher Microsoft.AspNetCore.Routing.Matching.DataSourceDependentMatcher.CreateMatcher(this, System.Collections.Generic.IReadOnlyList`1[Microsoft.AspNetCore.Http.Endpoint])"
-            "Microsoft.Extensions.Logging.ILogger`1[Microsoft.AspNetCore.Routing.Matching.DfaMatcher] Microsoft.Extensions.Logging.LoggerFactoryExtensions.CreateLogger(Microsoft.Extensions.Logging.ILoggerFactory)"
-            "System.Void Microsoft.Extensions.Hosting.Internal.HostingLoggerExtensions.Starting(Microsoft.Extensions.Logging.ILogger)"
-            "System.Action`4[Microsoft.Extensions.Logging.ILogger,T1,T2,System.Exception] Microsoft.Extensions.Logging.LoggerMessage.Define(Microsoft.Extensions.Logging.LogLevel, Microsoft.Extensions.Logging.EventId, System.String, Microsoft.Extensions.Logging.LogDefineOptions)"
-            "System.Action`6[Microsoft.Extensions.Logging.ILogger,T1,T2,T3,T4,System.Exception] Microsoft.Extensions.Logging.LoggerMessage.Define(Microsoft.Extensions.Logging.LogLevel, Microsoft.Extensions.Logging.EventId, System.String, Microsoft.Extensions.Logging.LogDefineOptions)"
-            "System.Action`5[Microsoft.Extensions.Logging.ILogger,T1,T2,T3,System.Exception] Microsoft.Extensions.Logging.LoggerMessage.Define(Microsoft.Extensions.Logging.LogLevel, Microsoft.Extensions.Logging.EventId, System.String, Microsoft.Extensions.Logging.LogDefineOptions)"
-            "System.Action`3[Microsoft.Extensions.Logging.ILogger,T1,System.Exception] Microsoft.Extensions.Logging.LoggerMessage.Define(Microsoft.Extensions.Logging.LogLevel, Microsoft.Extensions.Logging.EventId, System.String, Microsoft.Extensions.Logging.LogDefineOptions)"
-            "System.Int32 Microsoft.Extensions.Logging.LogValuesFormatter.FindBraceIndex(System.String, System.Char, System.Int32, System.Int32)"
-            "System.Int32 Microsoft.Extensions.Logging.LogValuesFormatter.FindIndexOfAny(System.String, System.Char[], System.Int32, System.Int32)"
-            "Microsoft.Extensions.Logging.LogValuesFormatter Microsoft.Extensions.Logging.LoggerMessage.CreateLogValuesFormatter(System.String, System.Int32)"
-            "System.Void Microsoft.Extensions.Logging.LogValuesFormatter..ctor(this, System.String)"
 
             // Middleware
             "System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Routing.Matching.Matcher] Microsoft.AspNetCore.Routing.EndpointRoutingMiddleware.InitializeAsync(this)"
@@ -958,3 +915,6 @@ module Loader =
 
     let internal isExecutorExecute (fullMethodName : string) =
         fullMethodName = "System.Object Microsoft.Extensions.Internal.ObjectMethodExecutor.Execute(this, System.Object, System.Object[])"
+
+    let internal isInvoke (fullMethodName : string) =
+        fullMethodName.Contains(".Invoke(")

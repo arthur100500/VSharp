@@ -44,6 +44,7 @@ type MethodWithBody internal (m : MethodBase) =
     let isFSharpInternalCall = lazy(Option.isSome tryFSharpInternalCall.Value)
     let isCSharpInternalCall = lazy(Map.containsKey fullGenericMethodName.Value Loader.CSharpImplementations)
     let isAspNetStart = lazy(Loader.isAspNetStart fullGenericMethodName.Value)
+    let isInvoke = lazy(Loader.isInvoke fullGenericMethodName.Value)
     let isAspNetConfiguration = lazy(Loader.isAspNetConfiguration fullGenericMethodName.Value)
     let isExecutorExecute = lazy(Loader.isExecutorExecute fullGenericMethodName.Value)
     let isShimmed = lazy(Loader.isShimmed fullGenericMethodName.Value)
@@ -329,6 +330,7 @@ type MethodWithBody internal (m : MethodBase) =
     member x.IsFSharpInternalCall with get() = isFSharpInternalCall.Value
     member x.IsCSharpInternalCall with get() = isCSharpInternalCall.Value
     member x.IsAspNetStart with get() = isAspNetStart.Value
+    member x.IsInvoke with get() = isInvoke.Value
     member x.IsAspNetConfiguration with get() = isAspNetConfiguration.Value
     member x.IsExecutorExecute with get() = isExecutorExecute.Value
 

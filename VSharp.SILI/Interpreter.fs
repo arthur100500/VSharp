@@ -659,6 +659,7 @@ type ILInterpreter() as this =
                 | Some arguments ->
                     let parameters = method.Parameters
                     let getDisallowNullAssumption index argument =
+                        if (parameters.Length <= index) then printfn "Debug"
                         if Attribute.IsDefined(parameters[index], typeof<CodeAnalysis.DisallowNullAttribute>)
                             then Some <| !!(IsNullReference argument)
                             else None
@@ -842,6 +843,9 @@ type ILInterpreter() as this =
             false
         else false
 
+    member private x.CallInvoke (cilState : cilState) thisOption args =
+        List.singleton cilState
+
     member private x.StartAspNet (cilState : cilState) args =
         Logger.trace "Starting exploration of ASP.NET application"
         Console.Clear()
@@ -948,6 +952,8 @@ type ILInterpreter() as this =
 
         if cilState.WebExploration && method.IsAspNetStart then
             x.StartAspNet cilState args |> k
+        elif method.IsInvoke then
+            x.CallInvoke cilState thisOption args |> k
         elif cilState.WebExploration && method.IsAspNetConfiguration then
             x.ConfigureAspNet cilState thisOption |> k
         elif cilState.WebExploration && method.IsExecutorExecute then

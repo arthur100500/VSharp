@@ -7,6 +7,94 @@ namespace IntegrationTests
     [TestSvmFixture]
     public static class Delegates
     {
+        private delegate void IntChanger(out int result);
+
+        private class DelegateInvoker
+        {
+            private IntChanger _del;
+
+            public DelegateInvoker(IntChanger del)
+            {
+                _del = del;
+            }
+
+            public int Invoke()
+            {
+                _del.Invoke(out var x);
+                return x;
+            }
+        }
+
+        private class ActionInvoker
+        {
+            private readonly Action<int> _action;
+
+            public ActionInvoker(Action<int> action)
+            {
+                _action = action;
+            }
+
+            public void InvokeAction(int argument)
+            {
+                _action(argument);
+            }
+        }
+
+        private class Writer
+        {
+            public void Write(int i)
+            {
+                Console.Write("Ignored");
+            }
+
+            public void Return11(out int i)
+            {
+                i = 11;
+            }
+        }
+
+        private static void Write(int i)
+        {
+            Console.Write("Ignored");
+        }
+
+        private static void Return10(out int i)
+        {
+            i = 10;
+        }
+
+        [TestSvm]
+        public static void ActionInvokerStatic()
+        {
+            var invoker = new ActionInvoker(Write);
+            invoker.InvokeAction(1);
+        }
+
+        [TestSvm]
+        public static void ActionInvokerWithThis()
+        {
+            var writer = new Writer();
+            var invoker = new ActionInvoker(writer.Write);
+            invoker.InvokeAction(1);
+        }
+
+        [TestSvm]
+        public static int DelegateInvokerStatic()
+        {
+            var invoker = new DelegateInvoker(Return10);
+            var x = invoker.Invoke();
+            return x;
+        }
+
+        [TestSvm]
+        public static int DelegateInvokerWithThis()
+        {
+            var writer = new Writer();
+            var invoker = new DelegateInvoker(writer.Return11);
+            var x = invoker.Invoke();
+            return x;
+        }
+
         [TestSvm(100)]
         public static void DelegateParameter1(Action action)
         {
