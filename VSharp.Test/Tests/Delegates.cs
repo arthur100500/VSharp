@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using VSharp.Test;
 
@@ -44,7 +45,8 @@ namespace IntegrationTests
         {
             public void Write(int i)
             {
-                Console.Write("Ignored");
+                if (i > 100)
+                    throw new ArgumentException("i was greater than 100");
             }
 
             public void Return11(out int i)
@@ -55,7 +57,8 @@ namespace IntegrationTests
 
         private static void Write(int i)
         {
-            Console.Write("Ignored");
+            if (i > 100)
+                throw new ArgumentException("i was greater than 100");
         }
 
         private static void Return10(out int i)

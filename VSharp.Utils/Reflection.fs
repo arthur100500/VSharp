@@ -1041,8 +1041,12 @@ module public Reflection =
             ilGenerator.Emit(OpCodes.Callvirt, methodInfo)
         else ilGenerator.Emit(OpCodes.Call, methodInfo)
 
-        // Boxing result value, if needed
+        // If result is void, load null
         let returnType = methodInfo.ReturnType
+        if returnType = typeof<Void> then
+            ilGenerator.Emit(OpCodes.Ldnull)
+
+        // Boxing result value, if needed
         if returnType.IsValueType then
             ilGenerator.Emit(OpCodes.Box, returnType)
 

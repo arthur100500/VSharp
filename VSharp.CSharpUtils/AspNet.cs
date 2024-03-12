@@ -24,4 +24,10 @@ public class AspNet
 
         return (target, result) => { setMethod.Invoke(target, new [] {result}); };
     }
+
+    [Implements("System.Void System.Diagnostics.DiagnosticListener.Write(this, System.String, System.Object)")]
+    public static void DiagnosticListenerWrite(object t, object str, object obj)
+    {
+
+    }
 }
