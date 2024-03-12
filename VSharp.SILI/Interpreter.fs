@@ -846,8 +846,20 @@ type ILInterpreter() as this =
             false
         else false
 
-    member private x.CallInvoke (cilState : cilState) thisOption args =
-        List.singleton cilState
+    member private x.CallInvoke (cilState : cilState) thisOption (args : term list) k =
+        let method = thisOption |> Option.bind (TryTermToFullyConcreteObj cilState.state)
+        assert(List.length args = 2)
+        match method, args with
+        | Some m, [thisArg; callArgs] ->
+            let invokeMethod = m :?> MethodInfo |> Reflection.createInvokeMethod |> Application.getMethod
+            let args = Some [Some callArgs]
+            Memory.InitFunctionFrame cilState.state invokeMethod (Some thisArg) args
+            Instruction(0<offsets>, invokeMethod) |> cilState.PushToIp
+            List.singleton cilState |> k
+        | None, _ ->
+            internalfail "TODO: if method is null!"
+        | _ ->
+            internalfail "Invoke must have 2 arguments"
 
     member private x.StartAspNet (cilState : cilState) args =
         Logger.trace "Starting exploration of ASP.NET application"
@@ -956,7 +968,7 @@ type ILInterpreter() as this =
         if cilState.WebExploration && method.IsAspNetStart then
             x.StartAspNet cilState args |> k
         elif method.IsInvoke then
-            x.CallInvoke cilState thisOption args |> k
+            x.CallInvoke cilState thisOption args k
         elif cilState.WebExploration && method.IsAspNetConfiguration then
             x.ConfigureAspNet cilState thisOption |> k
         elif cilState.WebExploration && method.IsExecutorExecute then
@@ -1168,11 +1180,13 @@ type ILInterpreter() as this =
             | Some (ConcreteDelegate info) ->
                 let mi = Application.getMethod info.methodInfo
                 // [NOTE] target is ref to closure: when we have it, 'this' = target, otherwise 'this' = thisOption
-                let this =
-                    match info.target with
-                    | NullRef _ -> this
-                    | target -> target
-                x.CommonCallVirt mi this args cilState
+                match info.target with
+                | NullRef _ ->
+                    assert(not mi.HasThis)
+                    x.CommonCall mi args None cilState id
+                | target ->
+                    assert mi.HasThis
+                    x.CommonCall mi args (Some target) cilState id
             | Some (CombinedDelegate delegates) ->
                 assert(List.length delegates > 1)
                 let argTypes = List.map TypeOf args

@@ -790,6 +790,7 @@ module Loader =
             "Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider+BinderItem[] Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider.GetParameterBindingInfo(Microsoft.AspNetCore.Mvc.ModelBinding.IModelBinderFactory, Microsoft.AspNetCore.Mvc.ModelBinding.IModelMetadataProvider, Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor)"
             "Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegate Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider.CreateBinderDelegate(Microsoft.AspNetCore.Mvc.ModelBinding.ParameterBinder, Microsoft.AspNetCore.Mvc.ModelBinding.IModelBinderFactory, Microsoft.AspNetCore.Mvc.ModelBinding.IModelMetadataProvider, Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor, Microsoft.AspNetCore.Mvc.MvcOptions)"
             "System.Threading.Tasks.Task Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.InvokeAsync(this)"
+            "System.Boolean Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultModelMetadata.get_IsBindingAllowed(this)"
 
             // Http
             "System.String Microsoft.AspNetCore.Http.HostString.ToUriComponent(this)"
@@ -879,4 +880,4 @@ module Loader =
         fullMethodName = "System.Object Microsoft.Extensions.Internal.ObjectMethodExecutor.Execute(this, System.Object, System.Object[])"
 
     let internal isInvoke (fullMethodName : string) =
-        fullMethodName.Contains(".Invoke(")
+        fullMethodName.Contains("System.Reflection.MethodBase.Invoke(")

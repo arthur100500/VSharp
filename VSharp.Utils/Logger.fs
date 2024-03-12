@@ -20,7 +20,7 @@ module Logger =
     let Trace = 5
 
 
-    let mutable currentTextWriter = Console.Out //new System.IO.StreamWriter(System.IO.File.Create("log.txt"))
+    let mutable currentTextWriter = Console.Out // new System.IO.StreamWriter(System.IO.File.Create("log.txt"))
     let mutable writeTimestamps = true
 
     let private enabledTags = Dictionary([
