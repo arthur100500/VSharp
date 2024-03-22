@@ -2,9 +2,11 @@
 
 open VSharp
 open VSharp.Core
+open VSharp.Interpreter.IL
+open VSharp.Interpreter.IL.CilState
 
 module Json =
-    [<Implements("System.String System.Text.Json.JsonSerializer.Serialize(TValue, System.Text.Json.JsonSerializerOptions)")>]
+    [<Implements("System.Threading.Tasks.Task System.Text.Json.JsonSerializer.SerializeAsync(System.IO.Stream, TValue, System.Text.Json.JsonSerializerOptions, System.Threading.CancellationToken)")>]
     val serialize: state -> term list -> term
 
     [<Implements("System.Threading.Tasks.ValueTask`1[System.Object] System.Text.Json.JsonSerializer.DeserializeAsync(System.IO.Stream, System.Type, System.Text.Json.JsonSerializerOptions, System.Threading.CancellationToken)")>]

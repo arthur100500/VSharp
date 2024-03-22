@@ -103,7 +103,11 @@ module internal Memory =
 
     let jsonDeserialize object : term =
         match object.term with
-        | _ -> failwith "Deserialize"
+        | Constant (_, source, t) ->
+            match source with
+            | :? jsonStringSource as {object = source} -> source
+            | _ -> internalfail "Expected jsonStringSource in source"
+        | _ -> internalfail "Expected constant"
 
 // ------------------------------- Instantiation -------------------------------
 

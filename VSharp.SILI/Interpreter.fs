@@ -889,7 +889,6 @@ type ILInterpreter() as this =
 
         let pathArg = Memory.AllocateString "/api/post" state
         let methodArg = Memory.AllocateString "POST" state
-        let bodyArg = Memory.AllocateString "3" state
         let parameters = Some [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg; None]
         Memory.InitFunctionFrame state method None parameters
         state.model <- Memory.EmptyModel method

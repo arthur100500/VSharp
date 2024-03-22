@@ -52,6 +52,7 @@ module API =
         val Ptr : pointerBase -> Type -> term -> term
         val HeapRef : heapAddress -> Type -> term
         val Union : (term * term) list -> term
+        val MakeStruct : bool -> (FieldInfo -> fieldId -> Type -> term) -> Type -> term
 
         val True : unit -> term
         val False : unit -> term
@@ -305,6 +306,7 @@ module API =
         val WriteClassFieldUnsafe : IErrorReporter -> state -> term -> fieldId -> term -> state list
         val WriteClassField : state -> term -> fieldId -> term -> state list
         val WriteArrayIndexUnsafe : IErrorReporter -> state -> term -> term list -> term -> Type option -> state list
+        val WriteArrayIndex : state -> term -> term list -> term -> Type option -> state list
         val WriteStaticField : state -> Type -> fieldId -> term -> unit
 
         val DefaultOf : Type -> term

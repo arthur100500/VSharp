@@ -795,25 +795,42 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Newobj, memoryStreamCtor)
         ilGenerator.Emit(OpCodes.Stloc, memoryStreamLocal)
 
-        // bodyArgumentLocal = JsonSerializer.Serialize(bodyArg);
+        // JsonSerializer.SerializeAsync(memoryStreamLocal, bodyArg, null, cancellationToken).Wait();
         let jsonSerializerType = jsonAssembly.GetTypes() |> Array.find (fun x -> x.Name = "JsonSerializer")
 
-        let serializeMethod =
+        let jsonSerializerTypeMethods =
             jsonSerializerType.GetMethods()
-            |> Array.find (fun x -> x.Name = "Serialize" && x.GetParameters().Length = 2 && x.GetParameters().[0].ParameterType.IsGenericParameter && x.IsGenericMethod)
+
+        let findSerializeAsync (x: MethodBase) =
+            let parameters = x.GetParameters()
+            x.Name = "SerializeAsync"
+            && x.IsGenericMethod
+            && parameters.Length = 4
+            && parameters.[0].Name = "utf8Json"
+            && parameters.[1].Name = "value"
+            && parameters.[2].Name = "options"
+            && parameters.[3].Name = "cancellationToken"
+
+        let serializeMethod =
+            Array.find findSerializeAsync jsonSerializerTypeMethods
             |> (fun m -> m.MakeGenericMethod(bodyArgs))
 
-        ilGenerator.Emit(OpCodes.Ldarg, 4)
-        ilGenerator.Emit(OpCodes.Ldnull)
-        ilGenerator.Emit(OpCodes.Call, serializeMethod)
-        ilGenerator.Emit(OpCodes.Stloc, bodyArgumentLocal)
+        let cancellationTokenType = serializeMethod.GetParameters().[3].ParameterType
 
-        // memoryStreamLocal.WriteByte((byte)bodyArgumentLocal[0]);
-        let streamWriteByteMethod = memoryStreamType.BaseType.GetMethods() |> Array.find (fun x -> x.Name = "WriteByte")
+        let taskType = serializeMethod.ReturnType
+        let taskWaitMethod = taskType.GetMethods() |> Array.find (fun x -> x.Name = "Wait" && x.GetParameters().Length = 0)
+
+        // TODO: Move up and clean up
+        let cancellationTokenLocal = ilGenerator.DeclareLocal(cancellationTokenType)
 
         ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
-        ilGenerator.Emit(OpCodes.Ldloc, bodyArgumentLocal)
-        ilGenerator.Emit(OpCodes.Callvirt, streamWriteByteMethod)
+        ilGenerator.Emit(OpCodes.Ldarg, 4)
+        ilGenerator.Emit(OpCodes.Ldnull)
+        ilGenerator.Emit(OpCodes.Ldloca_S, cancellationTokenLocal)
+        ilGenerator.Emit(OpCodes.Initobj, cancellationTokenType)
+        ilGenerator.Emit(OpCodes.Ldloc, cancellationTokenLocal)
+        ilGenerator.Emit(OpCodes.Call, serializeMethod)
+        ilGenerator.Emit(OpCodes.Callvirt, taskWaitMethod)
 
         // memoryStreamLocal.Position = 0;
         ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
@@ -931,7 +948,7 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Ldloc, httpResponseBodyFeatureLocal)
         ilGenerator.Emit(OpCodes.Callvirt, featuresSetMethod)
 
-        // defaultContextLocal = iHttpContextFactory.Create(features);
+        // defaultContextLocal = iHttpContextFactory.Create(featureCollectionLocal);
         let createMethod = iHttpContextFactoryType.GetMethod("Create", instancePublicBindingFlags)
         assert(createMethod <> null)
         ilGenerator.Emit(OpCodes.Ldarg_1)
