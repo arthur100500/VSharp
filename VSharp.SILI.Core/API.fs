@@ -4,6 +4,7 @@ open System
 open FSharpx.Collections
 open VSharp
 open VSharp.Core
+open VSharp.Core.Memory
 
 module API =
 
@@ -81,6 +82,7 @@ module API =
         let Ptr baseAddress typ offset = Ptr baseAddress typ offset
         let HeapRef address baseType = HeapRef address baseType
         let Union gvs = Union gvs
+        let MakeStruct isStatic makeField typ = makeStruct isStatic makeField typ
 
         let True() = True()
         let False() = False()
@@ -355,6 +357,7 @@ module API =
         let GetItem index evaluationStack = EvaluationStack.item index evaluationStack
         let FilterActiveFrame f evaluationStack = EvaluationStack.filterActiveFrame f evaluationStack
         let Union oldStack newStack = EvaluationStack.union oldStack newStack
+        let MakeStruct = Terms.makeStruct
         let MakeSymbolicActiveFrame f evaluationStack = EvaluationStack.makeSymbolicActiveFrame f evaluationStack
         let Length evaluationStack = EvaluationStack.length evaluationStack
         let FramesCount evaluationStack = EvaluationStack.framesCount evaluationStack
@@ -573,6 +576,9 @@ module API =
                     let arrayType = MostConcreteTypeOfRef state reference |> symbolicTypeToArrayType
                     Types.Cast value arrayType.elemType
             WriteUnsafe reporter state ref value
+
+        let WriteArrayIndex state reference indices value valueType =
+            WriteArrayIndexUnsafe (EmptyErrorReporter()) state reference indices value valueType
 
         let WriteStaticField state typ field value = Memory.writeStaticField state typ field value
 
