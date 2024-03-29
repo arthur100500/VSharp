@@ -1,6 +1,7 @@
 namespace VSharp
 
 open System.Collections.Generic
+open System.IO
 open System.Text
 
 module Logger =
@@ -19,11 +20,11 @@ module Logger =
     let Info = 4
     let Trace = 5
 
-    let mutable currentTextWriter = Console.Out
+    let mutable currentTextWriter = File.AppendText("C:/Users/arthu/Desktop/Log.txt")
     let mutable writeTimestamps = true
 
     let private enabledTags = Dictionary([
-        KeyValuePair(defaultTag, Error)
+        KeyValuePair(defaultTag, Info)
     ])
 
     let public configureWriter writer = currentTextWriter <- writer

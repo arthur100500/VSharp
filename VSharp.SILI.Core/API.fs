@@ -582,6 +582,9 @@ module API =
                     Types.Cast value arrayType.elemType
             WriteUnsafe reporter state ref value
 
+        let WriteArrayIndex state reference indices value valueType =
+            WriteArrayIndexUnsafe emptyReporter state reference indices value valueType
+
         let WriteStaticField state typ field value = state.memory.WriteStaticField typ field value
 
         let DefaultOf typ = makeDefaultValue typ

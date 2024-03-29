@@ -200,12 +200,12 @@ type private SVMExplorer(explorationOptions: ExplorationOptions, statistics: SVM
                 let typeType = concreteMemoryType.GetType()
                 let concreteMemoryFields = typeType.GetProperty("DeclaredFields").GetValue(concreteMemoryType) :?> FieldInfo array
                 let virtualToPhysField = concreteMemoryFields |> Array.find (fun x -> x.Name = "virtToPhys")
-                let virtualToPhys = virtualToPhysField.GetValue(state.state.concreteMemory)
+                let virtualToPhys = virtualToPhysField.GetValue(state.state.memory.ConcreteMemory)
                 let virtualToPhys = virtualToPhys :?> Dictionary<concreteHeapAddress, physicalAddress>
                 let elem = (virtualToPhys[r :?> concreteHeapAddress]).object :?> Microsoft.AspNetCore.Http.Features.HttpResponseFeature
                 elem.Body.Seek(0, SeekOrigin.Begin) |> ignore
                 let reader = new StreamReader(elem.Body)
-                printfn $"{elem.StatusCode} {reader.ReadToEnd()}"
+                printfn $"Result: {elem.StatusCode} {reader.ReadToEnd()}"
                 ()
             | _ ->
                 printfn "Result was not HeapRef"
