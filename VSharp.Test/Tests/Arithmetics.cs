@@ -434,6 +434,39 @@ namespace IntegrationTests
     }
 
     [TestSvmFixture]
+    public class SwitchStatement
+    {
+        public SwitchStatement(int x, int y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        private int X { get; }
+        private int Y { get; }
+
+        [TestSvm(100)]
+        public bool SimpleSwitchWithAdditionAndMultiplication()
+        {
+            if (X <= 0 || Y <= 0)
+            {
+                return false;
+            }
+
+            switch (checked(X + Y + X * Y + 1))
+            {
+                case 256: return true;
+                case 512: return false;
+                case 1024: return false;
+            }
+
+            return false;
+
+        }
+
+    }
+
+    [TestSvmFixture]
     public sealed class Arithmetics
     {
         // 7 + n

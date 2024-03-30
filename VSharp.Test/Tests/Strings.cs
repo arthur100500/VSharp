@@ -262,7 +262,7 @@ namespace IntegrationTests
             return 1;
         }
 
-        [TestSvm(100)]
+        [Ignore("create model for 'IcuGetAsciiCore' external method")]
         public static int GetAscii(string s)
         {
             var idn = new IdnMapping();

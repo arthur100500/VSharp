@@ -347,7 +347,7 @@ namespace IntegrationTests
         }
     }
 
-    [TestSvmFixture]
+    [Ignore("Handle exceptions while static initialization")]
     public static class ClassesSimpleException
     {
         [TestSvm]

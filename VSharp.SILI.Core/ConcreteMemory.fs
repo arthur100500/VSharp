@@ -124,10 +124,7 @@ type public ConcreteMemory private (physToVirt, virtToPhys, children, parents, c
             let childIsNull = childObj = null
             if childIsNull && update then
                 let exists, childDict = children.TryGetValue parent
-                if exists then
-                    for KeyValue(childLoc, _) in childDict do
-                        if childLoc.Includes childLoc then
-                            childDict.Remove childLoc |> ignore
+                if exists then childDict.Remove childLoc |> ignore
             elif not childIsNull then
                 let t = childLoc.Type
                 if t.IsValueType then
@@ -531,6 +528,13 @@ type public ConcreteMemory private (physToVirt, virtToPhys, children, parents, c
         let removed = virtToPhys.Remove address
         assert removed
         x.RemoveFromFullyConcretesRec phys
+        x.MarkSymbolic phys
+
+    member private x.MarkSymbolic phys =
+        let exists, parentDict = parents.TryGetValue phys
+        if exists then
+            for KeyValue(parent, childKind) in parentDict do
+                children[parent][childKind] <- Symbolic
 
     member private x.RemoveFromFullyConcretesRec phys =
         let removed = HashSet<physicalAddress>()
@@ -543,6 +547,5 @@ type public ConcreteMemory private (physToVirt, virtToPhys, children, parents, c
                 fullyConcretes.Remove child |> ignore
                 let exists, parentDict = parents.TryGetValue child
                 if exists then
-                    for KeyValue(parent, childKind) in parentDict do
-                        children[parent][childKind] <- Symbolic
+                    for KeyValue(parent, _) in parentDict do
                         queue.Enqueue parent

@@ -738,9 +738,7 @@ module Loader =
             "Microsoft.Extensions.DependencyInjection.IServiceCollection Microsoft.AspNetCore.Builder.WebApplicationBuilder.get_Services(this)"
             "System.IServiceProvider Microsoft.AspNetCore.Builder.ApplicationBuilder.GetProperty(this, System.String)"
             "System.IServiceProvider Microsoft.AspNetCore.Builder.ApplicationBuilder.get_ApplicationServices(this)"
-            "System.Void Microsoft.AspNetCore.Builder.WebApplicationBuilder..ctor(this, Microsoft.AspNetCore.Builder.WebApplicationOptions, System.Action`1[Microsoft.Extensions.Hosting.IHostBuilder])"
-            "Microsoft.Extensions.Configuration.IConfigurationBuilder Microsoft.Extensions.Configuration.EnvironmentVariablesExtensions.AddEnvironmentVariables(Microsoft.Extensions.Configuration.IConfigurationBuilder, System.String)"
-            "Microsoft.Extensions.Configuration.IConfigurationBuilder Microsoft.Extensions.Configuration.ConfigurationManager.Microsoft.Extensions.Configuration.IConfigurationBuilder.Add(this, Microsoft.Extensions.Configuration.IConfigurationSource)"
+            "Microsoft.Extensions.DependencyInjection.IServiceCollection Microsoft.AspNetCore.Builder.WebApplicationBuilder.get_Services(this)"
 
             // ConfigurationManager
             "System.Void Microsoft.Extensions.Configuration.ConfigurationManager.ReloadSources(this)"
@@ -848,8 +846,48 @@ module Loader =
             // PropertyActivator
             "System.Object Microsoft.Extensions.Internal.PropertyActivator`1[TContext].Activate(this, System.Object, TContext)"
 
-            // Hosting
-            "Microsoft.Extensions.DependencyInjection.ServiceDescriptor Microsoft.AspNetCore.Hosting.BootstrapHostBuilder.RunDefaultCallbacks(this)"
+            // TODO: Classify
+            "System.Void Microsoft.Extensions.Hosting.Internal.ConsoleLifetime.RegisterShutdownHandlers(this)"
+            "System.String System.RuntimeMethodHandle.GetName(System.IRuntimeMethodInfo)"
+            "System.Void System.Threading.CancellationTokenSource.Cancel(this, System.Boolean)"
+            "System.Void System.Threading.Tasks.Task.AddException(this, System.Object)"
+            "System.Void System.Threading.Tasks.Task.Finish(this, System.Boolean)"
+            "System.Boolean System.Threading.Tasks.Task.TrySetException(this, System.Object)"
+            "System.Void System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(System.Threading.Tasks.Task)"
+            "System.Void System.Runtime.InteropServices.SafeHandle.InternalRelease(this, System.Boolean)"
+            "System.Boolean System.Double.TryParse(System.String, System.Double&)"
+            "System.Boolean System.Single.TryParse(System.String, System.Single&)"
+            "System.String System.Exception.GetStackTrace(this)"
+
+            // ASP.NET Core
+            // Configuration builder
+            "System.Void Microsoft.Extensions.Configuration.ConfigurationManager+ConfigurationSources.Add(this, Microsoft.Extensions.Configuration.IConfigurationSource)"
+            "Microsoft.AspNetCore.Builder.WebApplicationBuilder Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(System.String[])"
+            "Microsoft.Extensions.Hosting.IHostBuilder Microsoft.AspNetCore.Hosting.BootstrapHostBuilder.ConfigureServices(this, System.Action`2[Microsoft.Extensions.Hosting.HostBuilderContext,Microsoft.Extensions.DependencyInjection.IServiceCollection])"
+            "Microsoft.AspNetCore.Builder.WebApplication Microsoft.AspNetCore.Builder.WebApplicationBuilder.Build(this)"
+            "Microsoft.AspNetCore.Http.RequestDelegate Microsoft.AspNetCore.Builder.ApplicationBuilder.Build(this)"
+            "Microsoft.AspNetCore.Builder.IApplicationBuilder Microsoft.AspNetCore.Builder.UseMiddlewareExtensions.UseMiddleware(Microsoft.AspNetCore.Builder.IApplicationBuilder, System.Object[])"
+
+            // ConfigurationManager
+            "System.Void Microsoft.Extensions.Configuration.ConfigurationManager.ReloadSources(this)"
+
+            // EntityFramework
+            "System.Void Microsoft.EntityFrameworkCore.DbContext..ctor(this)"
+            "Microsoft.EntityFrameworkCore.Internal.IDbContextDependencies Microsoft.EntityFrameworkCore.DbContext.get_DbContextDependencies(this)"
+            "Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry`1[TEntity] Microsoft.EntityFrameworkCore.DbContext.Add(this, TEntity)"
+            "Microsoft.EntityFrameworkCore.ChangeTracking.Internal.InternalEntityEntry Microsoft.EntityFrameworkCore.ChangeTracking.Internal.StateManager.GetOrCreateEntry(this, System.Object)"
+            "System.Void Microsoft.EntityFrameworkCore.DbContext.Dispose(this)"
+            "System.Void Microsoft.EntityFrameworkCore.Infrastructure.EntityFrameworkEventSource..ctor(this)"
+
+            // DependencyInjection
+            "Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceProviderEngine Microsoft.Extensions.DependencyInjection.ServiceProvider.GetEngine(this)"
+            "System.Void Microsoft.Extensions.DependencyInjection.ServiceProvider..ctor(this, System.Collections.Generic.ICollection`1[Microsoft.Extensions.DependencyInjection.ServiceDescriptor], Microsoft.Extensions.DependencyInjection.ServiceProviderOptions)"
+            "Microsoft.Extensions.DependencyInjection.ServiceProvider Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(Microsoft.Extensions.DependencyInjection.IServiceCollection, Microsoft.Extensions.DependencyInjection.ServiceProviderOptions)"
+            "Microsoft.Extensions.DependencyInjection.ServiceProvider Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(Microsoft.Extensions.DependencyInjection.IServiceCollection)"
+            "System.Void Microsoft.Extensions.DependencyInjection.ServiceLookup.CompiledServiceProviderEngine..ctor(this, Microsoft.Extensions.DependencyInjection.ServiceProvider)"
+            "System.Void Microsoft.Extensions.DependencyInjection.ServiceLookup.DynamicServiceProviderEngine..ctor(this, Microsoft.Extensions.DependencyInjection.ServiceProvider)"
+            "System.Object Microsoft.Extensions.DependencyInjection.ServiceProvider.GetService(this, System.Type)"
+            "Microsoft.Extensions.DependencyInjection.IServiceScope Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.CreateScope(System.IServiceProvider)"
 
             // TODO: Classify
             "System.Void Microsoft.Extensions.Hosting.Internal.ConsoleLifetime.RegisterShutdownHandlers(this)"

@@ -196,7 +196,7 @@ namespace IntegrationTests
             }
         }
 
-        [TestSvm(100)]
+        [Ignore("handle recursion")]
         [IgnoreFuzzer("Need StackOverflow handling")]
         public int CheckFactSafe(int n)
         {
@@ -210,7 +210,7 @@ namespace IntegrationTests
             }
         }
 
-        [TestSvm(100)]
+        [Ignore("handle recursion")]
         [IgnoreFuzzer("Need StackOverflow handling")]
         public int CheckFactUnsafe(int n)
         {

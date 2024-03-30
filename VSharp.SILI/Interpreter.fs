@@ -279,11 +279,8 @@ module internal InstructionsSet =
         | Types.Bool -> k <| Types.Cast term TypeUtils.uint32Type
         | t when t = typeof<double> || t = typeof<float> -> k term
         | t when TypeUtils.isIntegral t ->
-            let t =
-                match unsignedType with
-                | Some t -> t
-                | None -> TypeUtils.signedToUnsigned t
-            k <| Types.Cast term t // no specs found about overflows
+            let unsignedType = TypeUtils.signedToUnsigned t
+            k <| Types.Cast term unsignedType // no specs found about overflows
         | _ -> k term
 
     let makeUnsignedInteger term k =
@@ -783,7 +780,7 @@ type ILInterpreter() as this =
 
     member private x.TryConcreteInvoke (method : Method) (termArgs : term list) thisOption (cilState : cilState) =
         let state = cilState.state
-        let changedStaticFields = state.concreteMemory.ChangedStaticFields()
+        let changedStaticFields = state.memory.ConcreteMemory.ChangedStaticFields()
         if method.CanCallConcrete changedStaticFields then
             // TODO: support out parameters
             let objArgs = List.choose (TryTermToFullyConcreteObj state) termArgs
@@ -929,11 +926,11 @@ type ILInterpreter() as this =
         List.singleton cilState
 
     member private x.ExecutorExecute (cilState : cilState) thisOption args =
-        assert(cilState.state.memoryMode = ConcreteMode)
+        assert(cilState.state.memory.MemoryMode = ConcreteMode)
         assert(List.length args = 2)
         match thisOption with
         | Some({term = HeapRef({term = ConcreteHeapAddress address}, _)}) ->
-            let cm = cilState.state.concreteMemory
+            let cm = cilState.state.memory.ConcreteMemory
             let executor = cm.VirtToPhys address
             assert(executor <> null)
             let executorType = executor.GetType()
@@ -995,16 +992,16 @@ type ILInterpreter() as this =
             | None -> ()
             fallThroughCall cilState |> List.singleton |> k
         elif method.IsExternalMethod then
-            let stackTrace = Memory.StackTraceString cilState.state.stack
+            let stackTrace = Memory.StackTraceString cilState.state.memory.Stack
             let message = "Not supported extern method"
             UnknownMethodException(message, method, stackTrace) |> raise
         elif method.IsInternalCall then
             assert(not <| method.IsImplementedInternalCall)
-            let stackTrace = Memory.StackTraceString cilState.state.stack
+            let stackTrace = Memory.StackTraceString cilState.state.memory.Stack
             let message = "Not supported internal call"
             UnknownMethodException(message, method, stackTrace) |> raise
         elif method.IsNotImplementedIntrinsic then
-            let stackTrace = Memory.StackTraceString cilState.state.stack
+            let stackTrace = Memory.StackTraceString cilState.state.memory.Stack
             let message = "Not supported intrinsic method"
             UnknownMethodException(message, method, stackTrace) |> raise
         elif method.HasBody then
@@ -1809,242 +1806,80 @@ type ILInterpreter() as this =
         let rem x y = API.PerformBinaryOperation OperationType.Remainder_Un x y id
         this.CommonUnsignedDivRem true rem cilState
 
-    member private this.UnsignedCheckOverflow checkOverflowForUnsigned (cilState : cilState) =
-        let y, x = cilState.Pop2()
-        match y, x with
-        | IntPtrT, _
-        | _, IntPtrT
-        | UIntPtrT, _
-        | _, UIntPtrT ->
-            let x = makeUnsignedIntegerWithType typeof<UIntPtr> x id
-            let y = makeUnsignedIntegerWithType typeof<UIntPtr> y id
-            let max = TypeUtils.UIntPtr.MaxValue()
-            let zero = TypeUtils.UIntPtr.Zero()
-            checkOverflowForUnsigned zero max x y cilState
-        | Int64T, _
-        | _, Int64T
-        | UInt64T, _
-        | _, UInt64T ->
-            let x = makeUnsignedIntegerWithType typeof<UInt64> x id
-            let y = makeUnsignedIntegerWithType typeof<UInt64> y id
-            let max = TypeUtils.UInt64.MaxValue()
-            let zero = TypeUtils.UInt64.Zero()
-            checkOverflowForUnsigned zero max x y cilState
-        | _ when TypeUtils.isIntegralTerm x && TypeUtils.isIntegralTerm y ->
-            let x = makeUnsignedIntegerWithType typeof<UInt32> x id
-            let y = makeUnsignedIntegerWithType typeof<UInt32> y id
-            let max = TypeUtils.UInt32.MaxValue()
-            let zero = TypeUtils.UInt32.Zero()
-            checkOverflowForUnsigned zero max x y cilState
-        | _ -> internalfail "incompatible operands for UnsignedCheckOverflow"
-
-    member private this.SignedCheckOverflow checkOverflow (cilState : cilState) =
-        let y, x = cilState.Pop2()
-        match y, x with
-        | IntPtrT, _
-        | _, IntPtrT ->
-            let x = Types.Cast x typeof<IntPtr>
-            let y = Types.Cast y typeof<IntPtr>
-            let min = TypeUtils.IntPtr.MinValue()
-            let max = TypeUtils.IntPtr.MaxValue()
-            let zero = TypeUtils.IntPtr.Zero()
-            let minusOne = TypeUtils.IntPtr.MinusOne()
-            checkOverflow min max zero minusOne x y cilState
-        | Int64T, _
-        | _, Int64T ->
-            let x = Types.Cast x typeof<Int64>
-            let y = Types.Cast y typeof<Int64>
-            let min = TypeUtils.Int64.MinValue()
-            let max = TypeUtils.Int64.MaxValue()
-            let zero = TypeUtils.Int64.Zero()
-            let minusOne = TypeUtils.Int64.MinusOne()
-            checkOverflow min max zero minusOne x y cilState
-        | UIntPtrT, _
-        | _, UIntPtrT
-        | UInt64T, _
-        | _, UInt64T -> __unreachable__() // instead of *_ovf should be called *_ovf_un
-        | FloatT, _
-        | _, FloatT -> __unreachable__() // only integers
-        | _ ->
-            assert(TypeUtils.isIntegralTerm x && TypeUtils.isIntegralTerm y)
-            let x = Types.Cast x typeof<Int32>
-            let y = Types.Cast y typeof<Int32>
-            let min = TypeUtils.Int32.MinValue()
-            let max = TypeUtils.Int32.MaxValue()
-            let zero = TypeUtils.Int32.Zero()
-            let minusOne = TypeUtils.Int32.MinusOne()
-            checkOverflow min max zero minusOne x y cilState
-
     member private this.Add_ovf (cilState : cilState) =
         // min <= x + y <= max
-        let checkOverflow min max zero _ x y (cilState : cilState) =
-            let (>>=) = API.Arithmetics.(>>=)
-            let xMoreThan0 state k = k (x >>= zero, state)
-            let yMoreThan0 state k = k (y >>= zero, state)
-            let checkOverflowWhenMoreThan0 (state : state) k = // x >= 0 && y >= 0
-                PerformBinaryOperation OperationType.Subtract max y (fun diff ->
-                k (diff >>= x, state))
-            let checkOverflowWhenLessThan0 (state : state) k =
-                PerformBinaryOperation OperationType.Subtract min y (fun diff ->
-                k (x >>= diff, state))
-            let add (cilState : cilState) k = // no overflow
-                PerformBinaryOperation OperationType.Add x y (fun sum ->
-                cilState.Push sum
-                k [cilState])
-            cilState.StatedConditionalExecutionCIL xMoreThan0
-                (fun cilState -> // x >= 0
-                    cilState.StatedConditionalExecutionCIL yMoreThan0
-                        (fun cilState -> // y >= 0
-                            cilState.StatedConditionalExecutionCIL
-                                checkOverflowWhenMoreThan0
-                                add
-                                (this.Raise this.OverflowException))
-                        add)
-                (fun cilState -> // x < 0
-                    cilState.StatedConditionalExecutionCIL yMoreThan0
-                        add
-                        (fun cilState -> // x < 0 && y < 0
-                            cilState.StatedConditionalExecutionCIL
-                                checkOverflowWhenLessThan0
-                                add
-                                (this.Raise this.OverflowException)))
-                id
-        this.SignedCheckOverflow checkOverflow cilState
+        let y, x = cilState.Pop2()
+        let fits state k = k (PerformBinaryOperation OperationType.AddNoOvf x y id, state)
+        let add (cilState : cilState) k = // no overflow
+            PerformBinaryOperation OperationType.Add x y (fun sum ->
+            cilState.Push sum
+            k [cilState])
+        cilState.StatedConditionalExecutionCIL fits
+            add
+            (this.Raise this.OverflowException)
+            id
 
     member private this.Mul_ovf (cilState : cilState) =
         // min <= x * y <= max
-        let checkOverflow min max zero _ x y (cilState : cilState) =
-            let (>>=) = API.Arithmetics.(>>=)
-            let (>>) = API.Arithmetics.(>>)
-            let isZero state k = k ((x === zero) ||| (y === zero), state)
-            let xMoreThan0 state k = k (x >> zero, state)
-            let yMoreThan0 state k = k (y >> zero, state)
-            let checkOverflowWhenXM0YM0 (state : state) k = // x > 0 && y > 0
-                PerformBinaryOperation OperationType.Divide max y (fun quotient ->
-                k (quotient >>= x, state))
-            let checkOverflowWhenXL0YL0 (state : state) k = // x < 0 && y < 0
-                PerformBinaryOperation OperationType.Divide max y (fun quotient ->
-                k (x >>= quotient, state))
-            let checkOverflowWhenXM0YL0 (state : state) k = // x > 0 && y < 0
-                PerformBinaryOperation OperationType.Divide min x (fun quotient ->
-                k (y >>= quotient, state))
-            let checkOverflowWhenXL0YM0 (state : state) k = // x < 0 && y > 0
-                PerformBinaryOperation OperationType.Divide min y (fun quotient ->
-                k (x >>= quotient, state))
-            let mul (cilState : cilState) k = // no overflow
-                PerformBinaryOperation OperationType.Multiply x y (fun res ->
-                    cilState.Push res
-                    k [cilState])
-            cilState.StatedConditionalExecutionCIL isZero
-                (fun cilState k ->
-                    cilState.Push zero
-                    k [cilState])
-                (fun cilState ->
-                    cilState.StatedConditionalExecutionCIL xMoreThan0
-                        (fun cilState -> // x > 0
-                            cilState.StatedConditionalExecutionCIL yMoreThan0
-                                (fun cilState -> // y > 0
-                                    cilState.StatedConditionalExecutionCIL checkOverflowWhenXM0YM0
-                                        mul
-                                        (this.Raise this.OverflowException))
-                                (fun cilState -> // y < 0
-                                    cilState.StatedConditionalExecutionCIL checkOverflowWhenXM0YL0
-                                        mul
-                                        (this.Raise this.OverflowException)))
-                        (fun cilState -> // x < 0
-                            cilState.StatedConditionalExecutionCIL yMoreThan0
-                                (fun cilState -> // y > 0
-                                    cilState.StatedConditionalExecutionCIL checkOverflowWhenXL0YM0
-                                        mul
-                                        (this.Raise this.OverflowException))
-                                (fun cilState k -> // y < 0
-                                    cilState.StatedConditionalExecutionCIL checkOverflowWhenXL0YL0
-                                        mul
-                                        (this.Raise this.OverflowException)
-                                        k)))
-                id
-        this.SignedCheckOverflow checkOverflow cilState
+        let y, x = cilState.Pop2()
+        let fits state k = k (PerformBinaryOperation OperationType.MultiplyNoOvf x y id, state)
+        let mul (cilState : cilState) k = // no overflow
+            PerformBinaryOperation OperationType.Multiply x y (fun res ->
+            cilState.Push res
+            k [cilState])
+        cilState.StatedConditionalExecutionCIL fits
+            mul
+            (this.Raise this.OverflowException)
+            id
 
     member private this.Add_ovf_un (cilState : cilState) =
-        let checkOverflowForUnsigned _ max x y (cilState : cilState) =
-            let fits state k =
-                PerformBinaryOperation OperationType.Subtract max x (fun diff ->
-                k (Arithmetics.GreaterOrEqualUn diff y, state))
-            let add (cilState : cilState) k =
-                PerformBinaryOperation OperationType.Add x y (fun res ->
-                cilState.Push res
-                k [cilState])
-            cilState.StatedConditionalExecutionCIL fits
-                add
-                (this.Raise this.OverflowException)
-                id
-        this.UnsignedCheckOverflow checkOverflowForUnsigned cilState
+        let y, x = cilState.Pop2()
+        let fits state k = k (PerformBinaryOperation OperationType.AddNoOvf_Un x y id, state)
+        let add (cilState : cilState) k =
+            PerformBinaryOperation OperationType.Add x y (fun res ->
+            cilState.Push res
+            k [cilState])
+        cilState.StatedConditionalExecutionCIL fits
+            add
+            (this.Raise this.OverflowException)
+            id
 
     member private this.Mul_ovf_un (cilState : cilState) =
-        let checkOverflowForUnsigned zero max x y (cilState : cilState) =
-            let isZero state k = k ((x === zero) ||| (y === zero), state)
-            let zeroCase (cilState : cilState) k =
-                cilState.Push zero
-                List.singleton cilState |> k
-            let checkOverflow (cilState : cilState) k =
-                let fits state k =
-                    PerformBinaryOperation OperationType.Divide_Un max x (fun quotient ->
-                    k (Arithmetics.GreaterOrEqualUn quotient y, state))
-                let mul (cilState : cilState) k =
-                    PerformBinaryOperation OperationType.Multiply x y (fun res ->
-                    cilState.Push res
-                    List.singleton cilState |> k)
-                cilState.StatedConditionalExecutionCIL fits
-                    mul
-                    (this.Raise this.OverflowException)
-                    k
-            cilState.StatedConditionalExecutionCIL isZero
-                zeroCase
-                checkOverflow
-                id
-        this.UnsignedCheckOverflow checkOverflowForUnsigned cilState
+        let y, x = cilState.Pop2()
+        let fits state k = k (PerformBinaryOperation OperationType.MultiplyNoOvf_Un x y id, state)
+        let mul (cilState : cilState) k =
+            PerformBinaryOperation OperationType.Multiply x y (fun res ->
+            cilState.Push res
+            List.singleton cilState |> k)
+        cilState.StatedConditionalExecutionCIL fits
+            mul
+            (this.Raise this.OverflowException)
+            id
 
     member private this.Sub_ovf_un (cilState : cilState) =
-        let checkOverflowForUnsigned _ _ x y (cilState : cilState) =
-            cilState.StatedConditionalExecutionCIL
-                (fun state k -> k (Arithmetics.GreaterOrEqualUn x y, state))
-                (fun (cilState : cilState) k -> // no overflow
-                    PerformBinaryOperation OperationType.Subtract x y (fun res ->
-                    cilState.Push res
-                    k [cilState]))
-                (this.Raise this.OverflowException)
-                id
-        this.UnsignedCheckOverflow checkOverflowForUnsigned cilState
+        let y, x = cilState.Pop2()
+        cilState.StatedConditionalExecutionCIL
+            (fun state k -> k (Arithmetics.GreaterOrEqualUn x y, state))
+            (fun (cilState : cilState) k -> // no overflow
+                PerformBinaryOperation OperationType.Subtract x y (fun res ->
+                cilState.Push res
+                k [cilState]))
+            (this.Raise this.OverflowException)
+            id
 
     member private this.Sub_ovf (cilState : cilState) =
         // there is no way to reduce current operation to [x `Add_Ovf` (-y)]
         // min <= x - y <= max
-        let checkOverflowForSigned min max zero minusOne x y (cilState : cilState) =
-                let (>>=) = API.Arithmetics.(>>=)
-                let xGreaterEqualZero state k = k (x >>= zero, state)
-                let sub (cilState : cilState) k = // no overflow
-                    PerformBinaryOperation OperationType.Subtract x y (fun res ->
-                    cilState.Push res
-                    k [cilState])
-                cilState.StatedConditionalExecutionCIL xGreaterEqualZero
-                    (fun cilState -> // x >= 0 => max - x >= 0 => no overflow for [-1 * (max - x)]
-                        cilState.StatedConditionalExecutionCIL
-                            (fun state k ->
-                                PerformBinaryOperation OperationType.Subtract max x (fun diff ->
-                                PerformBinaryOperation OperationType.Multiply diff minusOne (fun minusDiff ->
-                                k (y >>= minusDiff, state)))) // y >= -(max - x)
-                            sub
-                            (this.Raise this.OverflowException))
-                    (fun cilState -> // x < 0 => no overflow for [min - x] # x < 0 => [min - x] != min => no overflow for (-1) * [min - x]
-                        cilState.StatedConditionalExecutionCIL
-                           (fun state k ->
-                                PerformBinaryOperation OperationType.Subtract min x (fun diff ->
-                                PerformBinaryOperation OperationType.Multiply diff minusOne (fun minusDiff ->
-                                k (minusDiff >>= y, state)))) // -(min - x) >= y
-                            sub
-                            (this.Raise this.OverflowException))
-                    id
-        this.SignedCheckOverflow checkOverflowForSigned cilState
+        let y, x = cilState.Pop2()
+        let fits state k = k (PerformBinaryOperation OperationType.SubNoOvf x y id, state)
+        let sub (cilState : cilState) k = // no overflow
+            PerformBinaryOperation OperationType.Subtract x y (fun res ->
+            cilState.Push res
+            k [cilState])
+        cilState.StatedConditionalExecutionCIL fits
+            sub
+            (this.Raise this.OverflowException)
+            id
 
     member private x.Newarr (m : Method) offset (cilState : cilState) =
         let (>>=) = API.Arithmetics.(>>=)
@@ -2065,7 +1900,7 @@ type ILInterpreter() as this =
 
     member x.CreateException (exceptionType : Type) arguments (cilState : cilState) =
         assert(not exceptionType.IsValueType)
-        let stackTrace = Memory.StackTrace cilState.state.stack |> List.map toString |> join "\n"
+        let stackTrace = Memory.StackTrace cilState.state.memory.Stack |> List.map toString |> join "\n"
         Logger.info $"{exceptionType}!\nStack trace:\n{stackTrace}"
         cilState.ClearEvaluationStackLastFrame()
         let constructors = exceptionType.GetConstructors()
