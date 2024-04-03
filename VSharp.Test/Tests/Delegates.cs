@@ -41,6 +41,11 @@ namespace IntegrationTests
             }
         }
 
+        public class Box<TValue>
+        {
+            public TValue Value;
+        }
+
         private class Writer
         {
             public void Write(int i)
@@ -96,6 +101,24 @@ namespace IntegrationTests
             var invoker = new DelegateInvoker(writer.Return11);
             var x = invoker.Invoke();
             return x;
+        }
+
+        [TestSvm]
+        public static int Closure(int i)
+        {
+            var closure = (int x) => (x + i);
+            var x = closure.Invoke(32);
+            return x;
+        }
+
+        [TestSvm]
+        public static int MutateBoxViaClosure(int i)
+        {
+            var box = new Box<int>();
+            box.Value = 10;
+            var boxMutator = (int x) => { box.Value = i + x; };
+            boxMutator.Invoke(32);
+            return box.Value;
         }
 
         [TestSvm(100)]

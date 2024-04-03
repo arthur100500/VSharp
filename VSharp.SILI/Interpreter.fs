@@ -849,8 +849,8 @@ type ILInterpreter() as this =
         match method, args with
         | Some m, [thisArg; callArgs] ->
             let invokeMethod = m :?> MethodInfo |> Reflection.createInvokeMethod |> Application.getMethod
-            let args = Some [Some callArgs]
-            Memory.InitFunctionFrame cilState.state invokeMethod (Some thisArg) args
+            let args = Some [(Some thisArg); (Some callArgs)]
+            Memory.InitFunctionFrame cilState.state invokeMethod None args
             Instruction(0<offsets>, invokeMethod) |> cilState.PushToIp
             List.singleton cilState |> k
         | None, _ ->
@@ -1181,6 +1181,7 @@ type ILInterpreter() as this =
                     assert(not mi.HasThis)
                     x.CommonCall mi args None cilState id
                 | target ->
+                    if (mi.HasThis |> not) then printfn "CallDelegate debug print"
                     assert mi.HasThis
                     x.CommonCall mi args (Some target) cilState id
             | Some (CombinedDelegate delegates) ->

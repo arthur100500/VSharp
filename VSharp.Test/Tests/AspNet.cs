@@ -17,6 +17,11 @@ namespace IntegrationTests
         public class Wallet
         {
             public int MoneyAmount { get; set; }
+
+            public void SetMoney(int newAmount)
+            {
+                MoneyAmount = newAmount;
+            }
         }
 
         public class KeyBundle
@@ -151,13 +156,44 @@ namespace IntegrationTests
         public static int SetPropertyViaDelegate(Wallet symbolic)
         {
             var propertyInfo = typeof(Wallet).GetProperty("MoneyAmount")!;
-
             var setMethod = propertyInfo.SetMethod;
-
             var propertySetter = (object target, object result) => { setMethod.Invoke(target, new [] {result}); };
-
             propertySetter(symbolic, 32);
+            return symbolic.MoneyAmount;
+        }
 
+        [TestSvm(expectedCoverage: 100)]
+        public static int SetPropertyViaSetter(Wallet symbolic)
+        {
+            var propertyInfo = typeof(Wallet).GetProperty("MoneyAmount")!;
+            var setMethod = propertyInfo.SetMethod;
+            setMethod!.Invoke(symbolic, new object?[] { 340597 });
+            return symbolic.MoneyAmount;
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int CallInvoke()
+        {
+            var valueToMutate = 0;
+            var a = () => { valueToMutate = 3241; };
+            a.Invoke();
+            return valueToMutate;
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int CallInvokeWithArgument()
+        {
+            var valueToMutate = 0;
+            var a = (int _) => { valueToMutate = 3241; };
+            a.Invoke(3);
+            return valueToMutate;
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int CallInvokeWithThis(Wallet symbolic)
+        {
+            var setMoneyMethod = typeof(Wallet).GetMethod("SetMoney");
+            setMoneyMethod!.Invoke(symbolic, new object[] { 77137 });
             return symbolic.MoneyAmount;
         }
     }
