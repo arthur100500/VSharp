@@ -146,5 +146,19 @@ namespace IntegrationTests
             public IRequestBodyPipeFeature? BodyPipe;
         }
 #pragma warning restore CS0649
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int SetPropertyViaDelegate(Wallet symbolic)
+        {
+            var propertyInfo = typeof(Wallet).GetProperty("MoneyAmount")!;
+
+            var setMethod = propertyInfo.SetMethod;
+
+            var propertySetter = (object target, object result) => { setMethod.Invoke(target, new [] {result}); };
+
+            propertySetter(symbolic, 32);
+
+            return symbolic.MoneyAmount;
+        }
     }
 }

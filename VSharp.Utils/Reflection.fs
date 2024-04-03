@@ -936,6 +936,8 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Newobj, streamResponseBodyFeatureCtor)
         ilGenerator.Emit(OpCodes.Stloc, httpResponseBodyFeatureLocal)
 
+        // TODO: featureCollectionLocal.Set<IEndpointFeature>(endpoint);
+
         // featureCollectionLocal.Set<IHttpResponseFeature>(httpResponseFeatureLocal);
         let featuresSetMethod = featuresSetGenericMethod.MakeGenericMethod(iHttpResponseFeatureType)
         ilGenerator.Emit(OpCodes.Ldloc, featureCollectionLocal)
