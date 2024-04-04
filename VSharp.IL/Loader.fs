@@ -294,6 +294,11 @@ module Loader =
             "System.Boolean System.RuntimeType.get_IsEnum(this)"
             "System.Reflection.ConstructorInfo System.Type.GetConstructor(this, System.Type[])"
             "System.Reflection.ConstructorInfo System.Type.GetConstructor(this, System.Reflection.BindingFlags, System.Reflection.Binder, System.Type[], System.Reflection.ParameterModifier[])"
+            "System.Type System.RuntimeType.MakeByRefType(this)"
+            "System.Attribute System.Attribute.GetCustomAttribute(System.Reflection.MemberInfo, System.Type)"
+            "System.ComponentModel.TypeConverter System.ComponentModel.TypeDescriptor.GetConverter(System.Type)"
+            "System.Object[] System.RuntimeType.GetCustomAttributes(this, System.Type, System.Boolean)"
+            "System.Object[] System.RuntimeType.GetCustomAttributes(this, System.Boolean)"
 
             // Object
             "System.Object System.Object.MemberwiseClone(this)"
@@ -433,6 +438,16 @@ module Loader =
             "System.Reflection.RuntimeMethodInfo System.Reflection.RuntimePropertyInfo.GetSetMethod(this, System.Boolean)"
             "System.Reflection.MethodInfo System.Reflection.PropertyInfo.get_SetMethod(this)"
             "System.Object System.Reflection.MethodBase.Invoke(this, System.Object, System.Object[])"
+            "System.Void System.Reflection.MetadataImport.Enum(this, System.Reflection.MetadataTokenType, System.Int32, System.Reflection.MetadataEnumResult&)"
+            "System.Void System.Reflection.MetadataImport.EnumCustomAttributes(this, System.Int32, System.Reflection.MetadataEnumResult&)"
+            "System.Reflection.CustomAttributeRecord[] System.Reflection.RuntimeCustomAttributeData.GetCustomAttributeRecords(System.Reflection.RuntimeModule, System.Int32)"
+            "System.Type System.Reflection.RuntimeModule.ResolveType(this, System.Int32, System.Type[], System.Type[])"
+            "System.Reflection.NullabilityInfo System.Reflection.NullabilityInfoContext.GetNullabilityInfo(this, System.Reflection.MemberInfo, System.Type, System.Reflection.NullabilityInfoContext+NullableAttributeStateParser)"
+            "System.Reflection.NullabilityInfo System.Reflection.NullabilityInfoContext.Create(this, System.Reflection.PropertyInfo)"
+            "System.RuntimeMethodHandle System.ModuleHandle.ResolveMethodHandle(this, System.Int32)"
+            "System.Reflection.MethodBase System.RuntimeType.GetMethodBase(System.Reflection.RuntimeModule, System.Int32)"
+            "System.Collections.Generic.IList`1[System.Reflection.CustomAttributeData] System.RuntimeType.GetCustomAttributesData(this)"
+
 
             // Activator
             "T System.Activator.CreateInstance()"
@@ -729,7 +744,6 @@ module Loader =
             // ASP.NET Core
             // Configuration builder
             "System.Void Microsoft.Extensions.Configuration.ConfigurationManager+ConfigurationSources.Add(this, Microsoft.Extensions.Configuration.IConfigurationSource)"
-            // "Microsoft.AspNetCore.Builder.WebApplicationBuilder Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(System.String[])"
             "Microsoft.Extensions.Hosting.IHostBuilder Microsoft.AspNetCore.Hosting.BootstrapHostBuilder.ConfigureServices(this, System.Action`2[Microsoft.Extensions.Hosting.HostBuilderContext,Microsoft.Extensions.DependencyInjection.IServiceCollection])"
             "Microsoft.AspNetCore.Builder.WebApplication Microsoft.AspNetCore.Builder.WebApplicationBuilder.Build(this)"
             "Microsoft.AspNetCore.Http.RequestDelegate Microsoft.AspNetCore.Builder.ApplicationBuilder.Build(this)"
@@ -789,6 +803,15 @@ module Loader =
             "Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegate Microsoft.AspNetCore.Mvc.Controllers.ControllerBinderDelegateProvider.CreateBinderDelegate(Microsoft.AspNetCore.Mvc.ModelBinding.ParameterBinder, Microsoft.AspNetCore.Mvc.ModelBinding.IModelBinderFactory, Microsoft.AspNetCore.Mvc.ModelBinding.IModelMetadataProvider, Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor, Microsoft.AspNetCore.Mvc.MvcOptions)"
             "System.Threading.Tasks.Task Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.InvokeAsync(this)"
             "System.Boolean Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultModelMetadata.get_IsBindingAllowed(this)"
+            "System.Boolean Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultModelMetadata.get_IsRequired(this)"
+            "System.Void Microsoft.AspNetCore.Mvc.ModelBinding.ObjectModelValidator.Validate(this, Microsoft.AspNetCore.Mvc.ActionContext, Microsoft.AspNetCore.Mvc.ModelBinding.Validation.ValidationStateDictionary, System.String, System.Object, Microsoft.AspNetCore.Mvc.ModelBinding.ModelMetadata, System.Object)"
+            "System.Boolean Microsoft.AspNetCore.Mvc.ModelBinding.ModelMetadata.get_IsComplexType(this)"
+            "System.Type Microsoft.AspNetCore.Mvc.ModelBinding.ModelAttributes.GetMetadataType(System.Type)"
+            "System.Void Microsoft.AspNetCore.Mvc.ModelBinding.ModelMetadata.InitializeTypeInformation(this)"
+            "System.Void Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultValidationMetadataProvider.CreateValidationMetadata(this, Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.ValidationMetadataProviderContext)"
+            "Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.ValidationMetadata Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultModelMetadata.get_ValidationMetadata(this)"
+            "System.String Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultModelMetadata.get_ValidationModelName(this)"
+            "Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.ValidationMetadata Microsoft.AspNetCore.Mvc.ModelBinding.Metadata.DefaultModelMetadata.get_ValidationMetadata(this) "
 
             // Http
             "System.String Microsoft.AspNetCore.Http.HostString.ToUriComponent(this)"
@@ -861,8 +884,8 @@ module Loader =
 
             // ASP.NET Core
             // Configuration builder
+            "System.Void Microsoft.AspNetCore.Builder.WebApplicationBuilder..ctor(this, Microsoft.AspNetCore.Builder.WebApplicationOptions, System.Action`1[Microsoft.Extensions.Hosting.IHostBuilder])"
             "System.Void Microsoft.Extensions.Configuration.ConfigurationManager+ConfigurationSources.Add(this, Microsoft.Extensions.Configuration.IConfigurationSource)"
-            "Microsoft.AspNetCore.Builder.WebApplicationBuilder Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder(System.String[])"
             "Microsoft.Extensions.Hosting.IHostBuilder Microsoft.AspNetCore.Hosting.BootstrapHostBuilder.ConfigureServices(this, System.Action`2[Microsoft.Extensions.Hosting.HostBuilderContext,Microsoft.Extensions.DependencyInjection.IServiceCollection])"
             "Microsoft.AspNetCore.Builder.WebApplication Microsoft.AspNetCore.Builder.WebApplicationBuilder.Build(this)"
             "Microsoft.AspNetCore.Http.RequestDelegate Microsoft.AspNetCore.Builder.ApplicationBuilder.Build(this)"

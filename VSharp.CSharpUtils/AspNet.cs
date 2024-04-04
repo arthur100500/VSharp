@@ -25,6 +25,14 @@ public class AspNet
         return (target, result) => { setMethod.Invoke(target, new [] {result}); };
     }
 
+    [Implements("System.Func`2[System.Object,System.Object] Microsoft.Extensions.Internal.PropertyHelper.MakeFastPropertyGetter(System.Reflection.PropertyInfo, System.Reflection.MethodInfo, System.Reflection.MethodInfo)")]
+    public static Func<object, object> MakeFastPropertyGetter(PropertyInfo pi, object refWrapper, object wrapper)
+    {
+        var getMethod = pi.GetMethod;
+
+        return target => getMethod.Invoke(target, System.Array.Empty<object>());
+    }
+
     [Implements("System.Void System.Diagnostics.DiagnosticListener.Write(this, System.String, System.Object)")]
     public static void DiagnosticListenerWrite(object t, object str, object obj)
     {
