@@ -1,5 +1,6 @@
 ﻿namespace VSharp.System
 
+open System
 open System.Reflection
 open VSharp
 open VSharp.Core
@@ -51,7 +52,8 @@ module Json =
             | _ -> Memory.DefaultOf fieldType
 
         match stream, TryTermToFullyConcreteObj state typ with
-        | {term = HeapRef _; hc = _}, Some typ ->
+        | {term = HeapRef _; hc = _}, Some concreteTyp ->
+            let isValueType = (concreteTyp :?> Type).IsValueType
             let bufferFieldId = getStreamBufferField state stream
             let buffer = Memory.ReadField state stream bufferFieldId
             let firstElement = Memory.ReadArrayIndex state buffer [MakeNumber 0] None
@@ -60,7 +62,9 @@ module Json =
             let taskFromResultMethod =
                 taskType.GetMethods()
                 |> Array.find (fun x -> x.Name = "FromResult")
-                |> fun x -> x.MakeGenericMethod(typeof<obj>)
+                |> _.MakeGenericMethod(typeof<obj>)
+
+            let taskResult = if isValueType then Memory.BoxValueType state taskResult else taskResult
             let valueTaskStruct = MakeStruct false (resultElseDefault taskResult) taskFromResultMethod.ReturnType
             valueTaskStruct
         | _, Some _ ->

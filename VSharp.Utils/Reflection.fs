@@ -1051,7 +1051,9 @@ module public Reflection =
         for arg in methodInfo.GetParameters() do
             ilGenerator.Emit(OpCodes.Ldarg_1)
             ilGenerator.Emit(OpCodes.Ldc_I4, i)
-            ilGenerator.Emit(OpCodes.Ldelem, arg.ParameterType)
+            ilGenerator.Emit(OpCodes.Ldelem_Ref)
+            if arg.ParameterType.IsValueType then
+                ilGenerator.Emit(OpCodes.Unbox_Any, arg.ParameterType)
             i <- i + 1
 
         // Calling method

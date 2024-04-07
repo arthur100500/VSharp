@@ -196,5 +196,79 @@ namespace IntegrationTests
             setMoneyMethod!.Invoke(symbolic, new object[] { 77137 });
             return symbolic.MoneyAmount;
         }
+
+        public class TestClass
+        {
+            private int k = 22;
+            public int Method(object x, int y, string z)
+            {
+                Console.WriteLine(x.GetType().ToString());
+                Console.WriteLine(z);
+                return y + k;
+            }
+
+            public int AddOne(int x)
+            {
+                if (x > 2) throw new ArgumentException();
+
+                return x + (k / k);
+            }
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int CallInvokeWithBoxed()
+        {
+            var arguments = new object[] {new(), 5, "hi"};
+            var classWithMethodMethod = typeof(TestClass).GetMethod("Method")!;
+            var classWithMethod = new TestClass();
+            var result = classWithMethodMethod.Invoke(classWithMethod, arguments);
+
+            return (int)result!;
+        }
+
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int CallInvokeWithBoxedSymbolic(object? arg1, object? arg2, object? arg3)
+        {
+            if (arg1 is null || arg2 is null || arg3 is null)
+                return -1;
+
+            var arguments = new object[3];
+
+            arguments[0] = arg1;
+            arguments[1] = arg2;
+            arguments[2] = arg3;
+
+            var classWithMethodMethod = typeof(TestClass).GetMethod("Method")!;
+            var classWithMethod = new TestClass();
+            var result = classWithMethodMethod.Invoke(classWithMethod, arguments);
+
+            return (int)result!;
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int CallInvokeWithSymbolicInteger(int arg)
+        {
+            var classWithMethodMethod = typeof(TestClass).GetMethod("AddOne")!;
+            var classWithMethod = new TestClass();
+
+            var result = classWithMethodMethod.Invoke(classWithMethod, new object[] { arg });
+            return (int)result!;
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int CallInvokeAfterJson(int arg)
+        {
+            var memoryStream = new MemoryStream();
+            JsonSerializer.SerializeAsync(memoryStream, arg).Wait();
+            // var argResult = JsonSerializer.DeserializeAsync(memoryStream, )
+
+
+            var classWithMethodMethod = typeof(TestClass).GetMethod("AddOne")!;
+            var classWithMethod = new TestClass();
+
+            var result = classWithMethodMethod.Invoke(classWithMethod, new object[] { arg });
+            return (int)result!;
+        }
     }
 }

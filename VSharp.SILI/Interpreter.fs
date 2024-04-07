@@ -868,7 +868,7 @@ type ILInterpreter() as this =
         let controllerMethods =
             executionAssembly.GetTypes()
             |> Seq.filter (fun t -> t.BaseType.Name = "ControllerBase")
-            |> Seq.map (fun t -> t.GetMethods())
+            |> Seq.map (_.GetMethods())
             |> Seq.concat
 
         let researchedController = controllerMethods |> Seq.head
@@ -892,21 +892,6 @@ type ILInterpreter() as this =
         let parameters = Some [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg; None]
         Memory.InitFunctionFrame state method None parameters
         state.model <- Memory.EmptyModel method
-        let bodyArgRef = getArgTerm 4 method
-        let bodyArgTerm = cilState.Read bodyArgRef
-        // Adding non-null constraint for 'body' argument
-        !!(IsNullReference bodyArgTerm) |> AddConstraint state
-        // Adding non-empty constraint for 'body' argument
-        let emptyString = Memory.AllocateEmptyString cilState.state (MakeNumber 0)
-        !!(emptyString === bodyArgTerm) |> AddConstraint state
-        // Filling model with non-null 'body' to match PC
-        let modelState =
-            match state.model with
-            | StateModel modelState -> modelState
-            | _ -> __unreachable__()
-        let bodyForModel = Memory.AllocateString " " modelState
-        let modelStates = Memory.Write modelState bodyArgRef bodyForModel
-        assert(List.length modelStates = 1 && modelStates[0] = modelState)
         Instruction(0<offsets>, method) |> cilState.PushToIp
         List.singleton cilState
 

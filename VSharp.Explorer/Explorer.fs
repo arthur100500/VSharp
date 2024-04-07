@@ -135,8 +135,6 @@ type private SVMExplorer(explorationOptions: ExplorationOptions, statistics: SVM
     let reportIncomplete = reporter.ReportIIE
 
     let reportState (suite : testSuite) (cilState : cilState) =
-        let debugRes = Memory.StateResult cilState.state
-        if debugRes <> Nop() then ()
         if cilState.WebExploration then Logger.warning "reportFinished" else
         try
             let isNewHistory() =
