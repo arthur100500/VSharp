@@ -1,9 +1,16 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using static VSharp.TestExtensions.ObjectsComparer;
 
 namespace VSharp.TestRunner
@@ -30,12 +37,12 @@ namespace VSharp.TestRunner
                 {
                     ti = UnitTest.DeserializeTestInfo(stream);
                 }
-                AssemblyManager.SetDependenciesDirs(ti.extraAssemblyLoadDirs);
+                AssemblyManager.SetDependenciesDirs(ti.common.extraAssemblyLoadDirs);
                 UnitTest test = UnitTest.DeserializeFromTestInfo(ti, false);
 
                 var method = test.Method;
 
-                var methodName = Reflection.getFullMethodName(method);
+                var methodName = ""; //Reflection.getFullMethodName(method);
                 Console.Out.WriteLine($"Starting reproducing {fileInfo.Name} for method {methodName}");
                 if (!checkResult)
                     Console.Out.WriteLine("Result check is disabled");

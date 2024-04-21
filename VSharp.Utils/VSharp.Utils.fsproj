@@ -7,13 +7,13 @@
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-      <Tailcalls>false</Tailcalls>
+        <Tailcalls>false</Tailcalls>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'DebugTailRec' ">
-      <Tailcalls>true</Tailcalls>
-      <DebugSymbols>true</DebugSymbols>
-      <DefineConstants>TRACE;DEBUG</DefineConstants>
+        <Tailcalls>true</Tailcalls>
+        <DebugSymbols>true</DebugSymbols>
+        <DefineConstants>TRACE;DEBUG</DefineConstants>
     </PropertyGroup>
 
     <ItemGroup>
@@ -42,7 +42,9 @@
         <Compile Include="ExternMocking.fs" />
         <Compile Include="PhysicalAddress.fs" />
         <Compile Include="MemoryGraph.fs" />
+        <Compile Include="Test.fs" />
         <Compile Include="UnitTest.fs" />
+        <Compile Include="AspIntegrationTest.fs" />
         <Compile Include="UnitTests.fs" />
         <Compile Include="Copier.fs" />
         <Compile Include="NumericUtils.fs" />
@@ -51,13 +53,13 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="FSharpx.Collections" Version="3.1.0" />
-      <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="3.0.0" />
-      <PackageReference Update="FSharp.Core" Version="7.0.*" />
+        <PackageReference Include="FSharpx.Collections" Version="3.1.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="3.0.0" />
+        <PackageReference Update="FSharp.Core" Version="7.0.*" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\VSharp.CSharpUtils\VSharp.CSharpUtils.csproj" />
+        <ProjectReference Include="..\VSharp.CSharpUtils\VSharp.CSharpUtils.csproj" />
     </ItemGroup>
 
 </Project>

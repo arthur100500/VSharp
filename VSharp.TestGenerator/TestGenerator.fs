@@ -376,9 +376,9 @@ module TestGenerator =
             | _ ->
                 let retVal = Memory.StateResult state |> model.Eval
                 test.Expected <- term2obj model state indices mockCache implementations test retVal
-            Some test
+            Some (test :> Test)
 
-    let private model2test (test : UnitTest) (suite : testSuite) indices mockCache (m : Method) model (state : state) =
+    let private model2test (test : UnitTest) (suite : testSuite) indices mockCache (m : Method) model (state : state) : Test option =
         assert(suite.IsFatalError || state.exceptionsRegister.Size = 1)
         let suitableState state =
             if m.HasParameterOnStack then Memory.CallStackSize state = 2
@@ -391,11 +391,23 @@ module TestGenerator =
         | StateModel modelState -> modelState2test test suite indices mockCache m model modelState state
         | _ -> __unreachable__()
 
-    let public state2test testSuite (m : Method) (state : state) =
-        let indices = Dictionary<concreteHeapAddress, int>()
-        let mockCache = Dictionary<ITypeMock, Mocking.Type>()
+    let private model2testWeb (test : AspIntegrationTest) (suite : testSuite) indices mockCache (m : Method) model (state : state) : Test option =
+        failwith "todo"
+
+    let model2unitTest m testSuite indices mockCache state =
         let test = UnitTest((m :> IMethod).MethodBase)
         model2test test testSuite indices mockCache m state.model state
+
+    let model2aspIntegrationTest testSuite indices mockCache state =
+        let test = AspIntegrationTest()
+        model2testWeb test testSuite indices mockCache m state.model state
+
+    let public state2test testSuite (m : Method) (state : state) : Test option =
+        let indices = Dictionary<concreteHeapAddress, int>()
+        let mockCache = Dictionary<ITypeMock, Mocking.Type>()
+        if false then model2unitTest m testSuite indices mockCache state
+        else model2aspIntegrationTest m testSuite indices mockCache state
+
 
     let public state2testWithMockingCache testSuite (m : Method) (state : state) mockCache =
         let indices = Dictionary<concreteHeapAddress, int>()
