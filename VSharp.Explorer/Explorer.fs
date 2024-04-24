@@ -16,8 +16,8 @@ open VSharp.Explorer
 open VSharp.Solver
 
 type IReporter =
-    abstract member ReportFinished: UnitTest -> unit
-    abstract member ReportException : UnitTest -> unit
+    abstract member ReportFinished: ATest -> unit
+    abstract member ReportException : ATest -> unit
     abstract member ReportIIE : InsufficientInformationException -> unit
     abstract member ReportInternalFail : Method -> Exception -> unit
     abstract member ReportCrash : Exception -> unit
@@ -135,7 +135,8 @@ type private SVMExplorer(explorationOptions: ExplorationOptions, statistics: SVM
     let reportIncomplete = reporter.ReportIIE
 
     let reportState (suite : testSuite) (cilState : cilState) =
-        if cilState.WebExploration then Logger.warning "reportFinished" else
+        let debugRes = Memory.StateResult cilState.state
+        if debugRes <> Nop() then ()
         try
             let isNewHistory() =
                 let methodHistory = Set.filter (fun h -> h.method.InCoverageZone) cilState.history
@@ -155,7 +156,10 @@ type private SVMExplorer(explorationOptions: ExplorationOptions, statistics: SVM
                     if entryMethod.HasParameterOnStack then
                         Memory.ForcePopFrames (callStackSize - 2) state
                     else Memory.ForcePopFrames (callStackSize - 1) state
-                match TestGenerator.state2test suite entryMethod state with
+                let generatedTest =
+                    if cilState.WebExploration then TestGenerator.state2webTest suite entryMethod state
+                    else TestGenerator.state2test suite entryMethod state
+                match generatedTest with
                 | Some test ->
                     statistics.TrackFinished(cilState, isError)
                     match suite with

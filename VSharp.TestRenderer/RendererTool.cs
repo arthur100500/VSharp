@@ -484,7 +484,7 @@ public static class Renderer
         testInfo ti;
         using (var stream = new FileStream(test.FullName, FileMode.Open, FileAccess.Read))
         {
-            ti = UnitTest.DeserializeTestInfo(stream);
+            ti = UnitTest.DeserializeTestInfo<testInfo>(stream);
         }
 
         return UnitTest.DeserializeFromTestInfo(ti, true);

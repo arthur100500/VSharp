@@ -109,8 +109,9 @@ type internal Fuzzer(
             let generationData = generationDatas[i]
             results[i] <- invoke method generationData.this generationData.args
 
-    let generateTest (test: UnitTest) =
-        let testPath = $"{outputDir}{Path.DirectorySeparatorChar}fuzzer_test_{testIdGenerator.NextId()}.vst"
+    let generateTest (test: ATest) =
+        let fileExtension = test.FileExtension
+        let testPath = $"{outputDir}{Path.DirectorySeparatorChar}fuzzer_test_{testIdGenerator.NextId()}.{fileExtension}"
         Task.Run(fun () ->
             test.Serialize(testPath)
             infoFuzzing $"Generated test: {testPath}"

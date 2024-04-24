@@ -37,7 +37,7 @@ module Json =
             internalfail "Stream was not a HeapRef"
 
     let serializeOther (state : state) (args : term list) =
-        // This serialize is similar and equivalent to one above, but with different arguemnts
+        // This serialize is similar and equivalent to one above, but with different arguments
         assert (List.length args = 5)
         serialize state [args[2]; args[0]; args[1]; args[2]; args[3]]
 

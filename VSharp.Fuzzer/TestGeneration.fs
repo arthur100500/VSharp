@@ -13,7 +13,7 @@ type internal InvocationResult =
 
 module internal TestGeneration =
 
-    let fuzzingResultToTest generationData invocationResult =
+    let fuzzingResultToTest (generationData : GenerationData) invocationResult =
 
         Logger.traceTestGeneration "Creating state"
         let m = generationData.method

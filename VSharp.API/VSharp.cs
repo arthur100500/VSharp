@@ -121,8 +121,8 @@ namespace VSharp
                 _isQuiet = isQuiet;
             }
 
-            public void ReportFinished(UnitTest unitTest) => _unitTests.GenerateTest(unitTest);
-            public void ReportException(UnitTest unitTest) => _unitTests.GenerateError(unitTest);
+            public void ReportFinished(ATest unitATest) => _unitTests.GenerateTest((UnitTest)unitATest);
+            public void ReportException(ATest unitATest) => _unitTests.GenerateError((UnitTest)unitATest);
             public void ReportIIE(InsufficientInformationException iie) {}
 
             public void ReportInternalFail(Method? method, Exception exn)

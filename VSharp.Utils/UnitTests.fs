@@ -7,7 +7,6 @@ open VSharp
 
 type UnitTests(outputDir : string) =
     let testPrefix = "VSharp.tests."
-    let testExtension = ".vst"
     let mutable testNumber = 0u
     let mutable errorNumber = 0u
     let rootDir = Directory.CreateDirectory(if String.IsNullOrWhiteSpace outputDir then Directory.GetCurrentDirectory() else outputDir)
@@ -23,18 +22,19 @@ type UnitTests(outputDir : string) =
         let linkName = $"%s{rootDir.FullName}%c{Path.DirectorySeparatorChar}%s{testPrefix}last"
         FileSystem.createSymlink currentDir.FullName linkName
 
-    let generateTest (test : UnitTest) (name : string) =
+    let generateTest (test : ATest) (name : string) =
+        let testExtension = test.FileExtension
         test.Serialize $"%s{currentDir.FullName}%c{Path.DirectorySeparatorChar}%s{name}%s{testExtension}"
 
     interface IDisposable with
         override x.Dispose() =
             ()
 
-    member x.GenerateTest (test : UnitTest) =
+    member x.GenerateTest (test : ATest) =
         testNumber <- testNumber + 1u
         generateTest test ("test" + testNumber.ToString())
 
-    member x.GenerateError (test : UnitTest) =
+    member x.GenerateError (test : ATest) =
         errorNumber <- errorNumber + 1u
         generateTest test ("error" + errorNumber.ToString())
 

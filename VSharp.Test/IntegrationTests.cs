@@ -221,8 +221,8 @@ namespace VSharp.Test
                     _unitTests = unitTests;
                 }
 
-                public void ReportFinished(UnitTest unitTest) => _unitTests.GenerateTest(unitTest);
-                public void ReportException(UnitTest unitTest) => _unitTests.GenerateError(unitTest);
+                public void ReportFinished(ATest unitTest) => _unitTests.GenerateTest(unitTest);
+                public void ReportException(ATest unitTest) => _unitTests.GenerateError(unitTest);
                 public void ReportIIE(InsufficientInformationException iie) {}
                 public void ReportInternalFail(Method method, Exception exn) => ExceptionDispatchInfo.Capture(exn).Throw();
                 public void ReportCrash(Exception exn) => ExceptionDispatchInfo.Capture(exn).Throw();
