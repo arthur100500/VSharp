@@ -868,7 +868,7 @@ type ILInterpreter() as this =
         let controllerMethods =
             executionAssembly.GetTypes()
             |> Seq.filter (fun t -> t.BaseType.Name = "ControllerBase")
-            |> Seq.map (_.GetMethods())
+            |> Seq.map (fun x -> x.GetMethods())
             |> Seq.concat
 
         let researchedController = controllerMethods |> Seq.head

@@ -59,7 +59,7 @@ type ATest (mockStorage : MockStorage, testInfoType : Type) =
     abstract BoxedLocations: HashSet<physicalAddress> with get
     abstract Info: obj with get
 
-    abstract SetExpected: obj -> unit
+    abstract Expected: obj with get, set
 
     default x.IsError
         with get() = x.Common.isError
@@ -108,7 +108,8 @@ type ATest (mockStorage : MockStorage, testInfoType : Type) =
         let name = $"patch_{patchId}"
         patchId <- patchId + 1
         name
-    static member DeserializeTestInfo(stream : FileStream) =
+    static member DeserializeTestInfo<'info>(stream : FileStream) =
+        stream.Position <- 0
         let serializer = XmlSerializer(typeof<'info>)
         try
             serializer.Deserialize(stream) :?> 'info

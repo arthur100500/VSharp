@@ -1,11 +1,12 @@
 namespace VSharp
 
 open System
-open System.Diagnostics
 open System.IO
-open System.Reflection
+open System.Text
+open System.Text.Json
 open System.Xml.Serialization
 open FSharpx.Collections
+open Microsoft.AspNetCore.Http.Features
 open VSharp
 
 [<CLIMutable>]
@@ -23,8 +24,7 @@ type webTestInfo = {
     requestPath : string
     requestMethod : string
     requestBody: string
-    responseBody: string
-    responseStatusCode: int32
+    responseObject: obj
 }
 with
     static member Empty() = {
@@ -43,8 +43,7 @@ with
         requestPath = null
         requestMethod = null
         requestBody = null
-        responseBody = null
-        responseStatusCode = 0
+        responseObject = null
     }
 
 type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, createCompactRepr : bool) =
@@ -55,6 +54,11 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
         let t = target.GetType()
         let p = t.GetProperty(propertyName)
         p.SetValue(target, newValue)
+    let readStream (stream : Stream) =
+        stream.Position <- 0;
+        use reader = new StreamReader(stream, Encoding.UTF8)
+        reader.ReadToEnd();
+
     override this.Common = common
     override this.MemoryGraph = memoryGraph
     override x.FileExtension with get() = "vswt"
@@ -70,10 +74,20 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
         with get() = info.requestMethod
         and set (value : string) = setViaReflection info "requestMethod" value
     member x.ResponseBody
-        with get() = info.responseBody
+        with get() =
+            let response = info.responseObject |> x.MemoryGraph.DecodeValue
+            let responseType = response.GetType()
+            let responseBodyField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "<Body>k__BackingField") |> snd
+            let responseBody = responseBodyField.GetValue(response)
+            responseBody :?> Stream |> readStream
         and set (value : string) = setViaReflection info "responseBody" value
     member x.ResponseStatusCode
-        with get() = info.responseStatusCode
+        with get() =
+            let response = info.responseObject |> x.MemoryGraph.DecodeValue
+            let responseType = response.GetType()
+            let responseStatusCodeField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "<StatusCode>k__BackingField") |> snd
+            let responseStatusCode = responseStatusCodeField.GetValue(response)
+            responseStatusCode :?> int32
         and set (value : int32) = setViaReflection info "responseStatusCode" value
     member x.assemblyPath
         with get() = info.assemblyPath
@@ -92,6 +106,6 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
         use stream = new FileStream(source, FileMode.Open, FileAccess.Read)
         AspIntegrationTest.Deserialize stream
 
-    override x.SetExpected(value) =
-        let httpResponse = x.MemoryGraph.DecodeValue(value)
-        failwith "todo"
+    override x.Expected
+        with set(value) = setViaReflection info "responseObject" value
+        and get() = memoryGraph.DecodeValue info.responseObject

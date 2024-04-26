@@ -78,14 +78,13 @@ type UnitTest private (m : MethodBase, info : testInfo, mockStorage : MockStorag
 
     member x.Args with get() = args
 
-    member x.Expected
+    override x.Expected
         with get() = expectedResult
         and set r =
             let t = typeof<testInfo>
             let p = t.GetProperty("expectedResult")
             p.SetValue(info, r)
 
-    override x.SetExpected(value) = x.Expected <- value
     member x.TypeMocks with get() : ResizeArray<Mocking.Type> = mockStorage.TypeMocks
 
     member x.CompactRepresentations with get() = compactRepresentations

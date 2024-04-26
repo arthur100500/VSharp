@@ -62,7 +62,7 @@ module Json =
             let taskFromResultMethod =
                 taskType.GetMethods()
                 |> Array.find (fun x -> x.Name = "FromResult")
-                |> _.MakeGenericMethod(typeof<obj>)
+                |> fun x -> x.MakeGenericMethod(typeof<obj>)
 
             let taskResult = if isValueType then Memory.BoxValueType state taskResult else taskResult
             let valueTaskStruct = MakeStruct false (resultElseDefault taskResult) taskFromResultMethod.ReturnType

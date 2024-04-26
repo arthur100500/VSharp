@@ -48,7 +48,7 @@ type testGeneratorInfo = {
 
 module TestGenerator =
 
-    let mutable private maxBufferSize = 128
+    let mutable private maxBufferSize = 2048
     let public setMaxBufferSize size = maxBufferSize <- size
 
     let private addMockToMemoryGraph (indices : Dictionary<concreteHeapAddress, int>) encodeMock evalField (test : ATest) addr (mock : ITypeMock) =
@@ -362,7 +362,7 @@ module TestGenerator =
             test.IsFatalError <- isFatal
         | _ ->
             let retVal = Memory.StateResult state |> info.model.Eval
-            test.SetExpected <| term2obj info retVal
+            test.Expected <- term2obj info retVal
 
     let setArguments info modelState k =
         let m = info.targetMethod
@@ -373,7 +373,7 @@ module TestGenerator =
             for pi in parametersInfo do
                 let arg = Memory.ReadArgument state pi
                 let concreteArg = term2obj info arg
-                k test (Array.head parametersInfo) concreteArg
+                k test pi concreteArg
         else
             for pi in parametersInfo do
                 let value =
@@ -393,7 +393,7 @@ module TestGenerator =
         | None -> None
         | Some(classParams, methodParams) ->
             let implementations = createImplementations info
-            let info = {info with implementations = implementations}
+            let info = { info with implementations = implementations }
             let concreteClassParams = Array.zeroCreate classParams.Length
             let mockedClassParams = Array.zeroCreate classParams.Length
             let concreteMethodParams = Array.zeroCreate methodParams.Length
@@ -436,6 +436,7 @@ module TestGenerator =
         | _ -> __unreachable__()
 
     let model2webTest info =
+        Logger.error "Starting to create test"
         let modelState =
             match info.state.model with
             | StateModel modelState -> modelState
@@ -448,9 +449,9 @@ module TestGenerator =
             match parameterInfo.Position with
             | 0 -> ()
             | 1 -> ()
-            | 2 -> test.RequestPath <- concreteValue :?> string
-            | 3 -> test.RequestMethod <- concreteValue :?> string
-            | 4 -> test.RequestBody <- jsonSerialize concreteValue
+            | 2 -> test.RequestPath <- test.MemoryGraph.DecodeString concreteValue
+            | 3 -> test.RequestMethod <- test.MemoryGraph.DecodeString concreteValue
+            | 4 -> test.RequestBody <- test.MemoryGraph.DecodeValue concreteValue |> jsonSerialize
             | _ -> failwith "TODO"
 
         // TODO: Set assembly path
@@ -458,7 +459,18 @@ module TestGenerator =
 
         let implementations = createImplementations info
         let info = {info with implementations = implementations}
-        setArguments info modelState fillCorrespondingField
+
+        let parameterInfos = info.targetMethod.Parameters
+        let concreteParameterCount = 4
+        let stateParameters = Array.truncate concreteParameterCount parameterInfos |> Array.skip 2 // First two are technical
+        let modelParameters = Array.skip concreteParameterCount parameterInfos
+
+        for pi in stateParameters do
+            Memory.ReadArgument info.state pi |> term2obj info |> fillCorrespondingField info.test pi
+
+        for pi in modelParameters do
+            Memory.ReadArgument modelState pi |> term2obj info |> fillCorrespondingField info.test pi
+
         setErrorOrResult info
         Some info.test
 

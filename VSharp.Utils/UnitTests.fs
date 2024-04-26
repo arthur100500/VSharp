@@ -24,7 +24,7 @@ type UnitTests(outputDir : string) =
 
     let generateTest (test : ATest) (name : string) =
         let testExtension = test.FileExtension
-        test.Serialize $"%s{currentDir.FullName}%c{Path.DirectorySeparatorChar}%s{name}%s{testExtension}"
+        test.Serialize $"%s{currentDir.FullName}%c{Path.DirectorySeparatorChar}%s{name}.%s{testExtension}"
 
     interface IDisposable with
         override x.Dispose() =
@@ -45,6 +45,5 @@ type UnitTests(outputDir : string) =
         reporter.Invoke writer
 
     member x.TestDirectory with get() = currentDir
-
     member x.UnitTestsCount with get() = testNumber
     member x.ErrorsCount with get() = errorNumber

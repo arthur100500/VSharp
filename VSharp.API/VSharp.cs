@@ -104,7 +104,7 @@ namespace VSharp
         /// </summary>
         public IEnumerable<FileInfo> Results()
         {
-            return OutputDir.GetFiles("*.vst");
+            return OutputDir.GetFiles("*.vs*t");
         }
     }
 
@@ -121,8 +121,8 @@ namespace VSharp
                 _isQuiet = isQuiet;
             }
 
-            public void ReportFinished(ATest unitATest) => _unitTests.GenerateTest((UnitTest)unitATest);
-            public void ReportException(ATest unitATest) => _unitTests.GenerateError((UnitTest)unitATest);
+            public void ReportFinished(ATest unitATest) => _unitTests.GenerateTest(unitATest);
+            public void ReportException(ATest unitATest) => _unitTests.GenerateError(unitATest);
             public void ReportIIE(InsufficientInformationException iie) {}
 
             public void ReportInternalFail(Method? method, Exception exn)

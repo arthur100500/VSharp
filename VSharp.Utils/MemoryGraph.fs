@@ -453,7 +453,11 @@ type MemoryGraph(repr : memoryRepr, mockStorage : MockStorage, createCompactRepr
 
     let () = Seq.iter2 decodeObject objReprs sourceObjects
 
-    member x.DecodeValue (obj : obj) = decodeValue obj
+    member x.DecodeValue (obj : obj) =
+        let decoded = decodeValue obj
+        let decodedType = decoded.GetType()
+        assert((decodedType.Namespace = "VSharp" && decodedType.Name.Contains("Repr")) |> not)
+        decoded
 
     member x.CompactRepresentations() = compactRepresentations
 
