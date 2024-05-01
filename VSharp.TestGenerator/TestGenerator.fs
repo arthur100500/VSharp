@@ -7,6 +7,7 @@ open System.Text.Json
 open VSharp
 open VSharp.Core
 open System.Linq
+open VSharp.Core.API
 
 type public testSuite =
     | Test
@@ -340,7 +341,7 @@ module TestGenerator =
                 encodeExternMock info mock
         implementations
 
-    let setErrorOrResult info =
+    let setErrorOrResult info k =
         let test = info.test
         let suite = info.suite
         let state = info.state
@@ -362,7 +363,8 @@ module TestGenerator =
             test.IsFatalError <- isFatal
         | _ ->
             let retVal = Memory.StateResult state |> info.model.Eval
-            test.Expected <- term2obj info retVal
+            let expected = term2obj info retVal
+            k test expected
 
     let setArguments info modelState k =
         let m = info.targetMethod
@@ -419,7 +421,8 @@ module TestGenerator =
                 let concreteThis = term2obj info thisTerm
                 test.ThisArg <- concreteThis
 
-            setErrorOrResult info
+            let setExpected (test : ATest) expected = test.Expected <- expected
+            setErrorOrResult info setExpected
             Some (test :> ATest)
 
     let private model2test info =
@@ -471,7 +474,54 @@ module TestGenerator =
         for pi in modelParameters do
             Memory.ReadArgument modelState pi |> term2obj info |> fillCorrespondingField info.test pi
 
-        setErrorOrResult info
+        let getStreamBufferField state stream =
+            let memoryStreamType = MostConcreteTypeOfRef state stream
+            let memoryStreamBufferField =
+                memoryStreamType.GetFields(BindingFlags.Instance + BindingFlags.NonPublic)
+                |> Array.find (fun x -> x.Name = "_buffer")
+            let bufferFieldId =
+                { declaringType = memoryStreamType
+                  name = "_buffer"
+                  typ = memoryStreamBufferField.FieldType }
+            bufferFieldId
+
+        let isJsonByte buffer =
+            let zero = MakeNumber 0
+            let firstElement = Memory.ReadArrayIndex info.state buffer [zero] None
+            match firstElement.term with
+            | Constant ({v=name}, _, _) when name.Contains "JsonByte(" -> true
+            | _ -> false
+
+        let setExpected (test : ATest) _ =
+            let test = test :?> AspIntegrationTest
+            let response = Memory.StateResult info.state |> info.model.Eval
+            let responseType = TypeOf response
+            let bodyField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "<Body>k__BackingField") |> fst
+            let responseBody = Memory.ReadField info.state response bodyField
+            let bufferFieldId = getStreamBufferField info.state responseBody
+            let buffer = Memory.ReadField info.state responseBody bufferFieldId
+            let zero = MakeNumber 0
+            let one = MakeNumber 1
+            let bufferLength = Memory.CountOfArrayElements info.state buffer
+            match bufferLength with
+            | o when o = one && isJsonByte buffer ->
+                let firstElement = Memory.ReadArrayIndex info.state buffer [zero] None
+                let taskResult = JsonDeserialize firstElement
+                let taskResultEvaluated = taskResult |> term2obj info
+                test.ResponseBody <- taskResultEvaluated
+            | z when z = zero ->
+                let emptyString = Memory.AllocateEmptyString info.state zero
+                let emptyString = term2obj info emptyString
+                test.ResponseBody <- emptyString
+            | _ ->
+                () // TODO: Figure out a way to propagate message from stream here
+            let responseStatusCodeField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "<StatusCode>k__BackingField") |> fst
+            let responseStatusCode = Memory.ReadField info.state response responseStatusCodeField
+            let responseStatusCodeEvaluated = responseStatusCode |> term2obj info
+            test.ResponseStatusCode <- responseStatusCodeEvaluated :?> int32
+
+        setErrorOrResult info setExpected
+
         Some info.test
 
     let public state2test testSuite (m : Method) (state : state) : ATest option =

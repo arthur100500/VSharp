@@ -20,7 +20,7 @@ module Logger =
     let Info = 4
     let Trace = 5
 
-    let mutable currentTextWriter = File.AppendText("C:/Users/arthu/Desktop/Log.txt")
+    let mutable currentTextWriter = Console.Out //File.AppendText(@"C:/Users/arthu/OneDrive/Рабочий стол/Log.txt")
     let mutable writeTimestamps = true
 
     let private enabledTags = Dictionary([

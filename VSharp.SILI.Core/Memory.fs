@@ -97,6 +97,7 @@ module internal Memory =
             override x.TypeOfLocation = typeof<int32>
 
     let jsonSerialize object =
+        // TODO: Save JsonOptions
         let name = $"JsonByte({object})"
         let source = {object = object}
         Constant name source typeof<byte>

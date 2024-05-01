@@ -76,7 +76,7 @@ module public Reflection =
                 with _ ->
                     AssemblyManager.LoadFromAssemblyPath moduleName
         try
-            assembly.Modules |> Seq.find (fun m -> m.FullyQualifiedName = moduleName)
+            assembly.Modules |> Seq.find (fun m -> moduleName.Contains(m.Name))
         with e -> raise e
 
     let resolveMethodBase (assemblyName : string) (moduleName : string) (token : int32) =

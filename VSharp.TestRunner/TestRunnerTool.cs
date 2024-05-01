@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using static VSharp.TestExtensions.ObjectsComparer;
 
 namespace VSharp.TestRunner
@@ -122,10 +123,10 @@ namespace VSharp.TestRunner
         private static object RunAspNetTest(ATest rawTest)
         {
             var test = (AspIntegrationTest)rawTest;
-            // Should be stored in .vst
-            var assemblyPath = @"C:\Users\arthu\Documents\GitHub\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.dll";
-            var sourceProjectPath = @"C:\Users\arthu\Documents\GitHub\AspNetApps\CatPhotoApi\CatPhotoApi\";
-            var depsPath = @"C:\Users\arthu\Documents\GitHub\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.deps.json";
+            // Should be stored in .vswt
+            var assemblyPath = @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.dll";
+            var sourceProjectPath = @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi";
+            var depsPath = @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.deps.json";
             var requestPath = test.RequestPath;
             var requestMethod = test.RequestMethod;
             var requestBody = test.RequestBody;
@@ -146,11 +147,13 @@ namespace VSharp.TestRunner
             {
                 builder
                     .UseSetting("contentRoot", sourceProjectPath)
+                    .UseEnvironment("Production")
                     .UseContentRoot(sourceProjectPath)
+                    .ConfigureLogging(o => o.AddFilter(logLevel => logLevel >= LogLevel.Warning))
                     .UseConfiguration(new ConfigurationBuilder().SetBasePath(sourceProjectPath).Build());
             }
 
-            withWebHostBuilderMethod!.Invoke(factory, new object[] { (Action<IWebHostBuilder>)WebHostBuilder });
+            factory = withWebHostBuilderMethod!.Invoke(factory, new object[] { (Action<IWebHostBuilder>)WebHostBuilder });
 
             Environment.CurrentDirectory = sourceProjectPath;
 
@@ -195,10 +198,10 @@ namespace VSharp.TestRunner
             var resultStatusCode = (int)result.StatusCode;
             if (!CheckResult(expectedStatusCode, resultStatusCode)) return false;
 
-            var expectedBody = test.ResponseBody;
+            var expectedBody = (string)test.ResponseBody;
             var resultBody = result.Content.ReadAsStringAsync().Result;
 
-            return CheckResult(expectedBody, resultBody);
+            return expectedBody == resultBody;
         }
 
         private static bool ReproduceWebTest(FileInfo fileInfo, SuiteType suiteType, bool checkResult, bool fileMode = false)

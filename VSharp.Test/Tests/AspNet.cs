@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using VSharp.Test;
@@ -269,6 +270,68 @@ namespace IntegrationTests
 
             var result = classWithMethodMethod.Invoke(classWithMethod, new object[] { arg });
             return (int)result!;
+        }
+
+        [TestSvm(expectedCoverage: 65)]
+        public static int JsonDeserializeThrowsExceptionOnTypeMismatch(int arg)
+        {
+            try
+            {
+                var memoryStream = new MemoryStream();
+                JsonSerializer.SerializeAsync(memoryStream, arg).Wait();
+                memoryStream.Position = 0;
+                var result = JsonSerializer.DeserializeAsync(memoryStream, typeof(Wallet)).Result;
+                return (int)result!;
+            }
+            catch (Exception _) // Needs to be this way as exception thrown and actual is currently different
+            {
+                return 25;
+            }
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int JsonDeserializeReferenceType(Wallet arg)
+        {
+            var memoryStream = new MemoryStream();
+            JsonSerializer.SerializeAsync(memoryStream, arg).Wait();
+            memoryStream.Position = 0;
+            var result = (Wallet)JsonSerializer.DeserializeAsync(memoryStream, typeof(Wallet)).Result!;
+            return result.MoneyAmount + 1;
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static int JsonDeserializeValueType(int arg)
+        {
+            var memoryStream = new MemoryStream();
+            JsonSerializer.SerializeAsync(memoryStream, arg).Wait();
+            memoryStream.Position = 0;
+            var result = (int)JsonSerializer.DeserializeAsync(memoryStream, typeof(int)).Result!;
+            return result + 2;
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static string MemoryStreamReadWrite(string arg)
+        {
+            var memoryStream = new MemoryStream();
+            var writer = new StreamWriter(memoryStream);
+            writer.Write(arg + "Hello world!");
+            memoryStream.Position = 0;
+            var reader = new StreamReader(memoryStream);
+
+            return reader.ReadToEnd();
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static string JsonSerializeGetsCorrectString(Wallet arg)
+        {
+            if (arg.MoneyAmount < 0)
+                return "failed string";
+
+            var memoryStream = new MemoryStream();
+            JsonSerializer.SerializeAsync(memoryStream, arg).Wait();
+            memoryStream.Position = 0;
+            var reader = new StreamReader(memoryStream);
+            return reader.ReadToEnd();
         }
     }
 }

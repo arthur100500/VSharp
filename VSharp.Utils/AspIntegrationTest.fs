@@ -24,7 +24,8 @@ type webTestInfo = {
     requestPath : string
     requestMethod : string
     requestBody: string
-    responseObject: obj
+    responseBody: obj
+    responseStatusCode: int32
 }
 with
     static member Empty() = {
@@ -43,13 +44,18 @@ with
         requestPath = null
         requestMethod = null
         requestBody = null
-        responseObject = null
+        responseBody = null
+        responseStatusCode = 0
     }
 
 type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, createCompactRepr : bool) =
     inherit ATest(mockStorage, typeof<webTestInfo>)
     let common = info.common
     let memoryGraph = MemoryGraph(common.memory, mockStorage, createCompactRepr)
+    let jsonOptions =
+        let options = JsonSerializerOptions()
+        options.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
+        options
     let setViaReflection target propertyName newValue =
         let t = target.GetType()
         let p = t.GetProperty(propertyName)
@@ -75,19 +81,14 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
         and set (value : string) = setViaReflection info "requestMethod" value
     member x.ResponseBody
         with get() =
-            let response = info.responseObject |> x.MemoryGraph.DecodeValue
-            let responseType = response.GetType()
-            let responseBodyField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "<Body>k__BackingField") |> snd
-            let responseBody = responseBodyField.GetValue(response)
-            responseBody :?> Stream |> readStream
-        and set (value : string) = setViaReflection info "responseBody" value
+            if isNull info.responseBody |> not then
+                x.MemoryGraph.DecodeValue info.responseBody
+                |> fun x -> JsonSerializer.Serialize(x, jsonOptions)
+                |> fun x -> x :> obj
+                else info.responseBody
+        and set (value : obj) = setViaReflection info "responseBody" value
     member x.ResponseStatusCode
-        with get() =
-            let response = info.responseObject |> x.MemoryGraph.DecodeValue
-            let responseType = response.GetType()
-            let responseStatusCodeField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "<StatusCode>k__BackingField") |> snd
-            let responseStatusCode = responseStatusCodeField.GetValue(response)
-            responseStatusCode :?> int32
+        with get() = info.responseStatusCode
         and set (value : int32) = setViaReflection info "responseStatusCode" value
     member x.assemblyPath
         with get() = info.assemblyPath
@@ -107,5 +108,5 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
         AspIntegrationTest.Deserialize stream
 
     override x.Expected
-        with set(value) = setViaReflection info "responseObject" value
-        and get() = memoryGraph.DecodeValue info.responseObject
+        with set(value) = ()
+        and get() = (x.ResponseBody, x.ResponseStatusCode)

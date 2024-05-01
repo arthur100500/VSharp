@@ -455,7 +455,7 @@ type MemoryGraph(repr : memoryRepr, mockStorage : MockStorage, createCompactRepr
 
     member x.DecodeValue (obj : obj) =
         let decoded = decodeValue obj
-        let decodedType = decoded.GetType()
+        let decodedType = if isNull decoded then typeof<obj> else decoded.GetType()
         assert((decodedType.Namespace = "VSharp" && decodedType.Name.Contains("Repr")) |> not)
         decoded
 
