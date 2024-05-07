@@ -224,10 +224,33 @@ module TestGenerator =
                                         if checkArrayIndex i then
                                             indicesWithValues[i] <- v
                             | _ -> ()
+
                     updates |> RegionTree.foldr addOneKey ()
                     let indices = indicesWithValues.Keys.ToArray()
                     let values = indicesWithValues.Values.ToArray()
-                    defaultValue, indices.ToArray(), values.ToArray()
+
+                    let decodeJsonString _ (k : updateTreeKey<heapArrayKey, term>) f =
+                        let value = k.value
+                        match k.key with
+                        | OneArrayIndexKey(address, keyIndices) ->
+                            let heapAddress = model.Eval address
+                            match heapAddress, value.term with
+                            | {term = ConcreteHeapAddress(cha')}, Constant ({v=name}, _, _) when name.Contains "JsonByte(" && cha' = cha ->
+                                let i = keyIndices |> List.map (encode >> unbox)
+                                let v = value |> JsonDeserialize
+                                v |> model.Eval |> TryTermToObj state |> Option.toObj
+                            | _ -> f
+                        | _ -> f
+
+
+                    let decodeJsonByte () =
+                        let jsonLength = 100
+                        let contents = updates |> RegionTree.foldr decodeJsonString null
+                        defaultValue, [|[0]|], [| 32 :> obj; 41|] // TODO: here
+
+                    // Case for Byte arrays containing JSON-Byte as only element
+                    if values.Length = 1 && true then decodeJsonByte ()
+                    else defaultValue, indices.ToArray(), values.ToArray()
                 | None -> null, Array.empty, Array.empty
             let indices = Array.map Array.ofList indices
             test.MemoryGraph.AddCompactArrayRepresentation typ defaultValue indices values lengths lowerBounds index
@@ -496,7 +519,8 @@ module TestGenerator =
             let test = test :?> AspIntegrationTest
             let response = Memory.StateResult info.state |> info.model.Eval
             let responseType = TypeOf response
-            let bodyField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "<Body>k__BackingField") |> fst
+            let bodyField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "m_Item2") |> fst
+
             let responseBody = Memory.ReadField info.state response bodyField
             let bufferFieldId = getStreamBufferField info.state responseBody
             let buffer = Memory.ReadField info.state responseBody bufferFieldId
@@ -515,7 +539,7 @@ module TestGenerator =
                 test.ResponseBody <- emptyString
             | _ ->
                 () // TODO: Figure out a way to propagate message from stream here
-            let responseStatusCodeField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "<StatusCode>k__BackingField") |> fst
+            let responseStatusCodeField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "m_Item1") |> fst
             let responseStatusCode = Memory.ReadField info.state response responseStatusCodeField
             let responseStatusCodeEvaluated = responseStatusCode |> term2obj info
             test.ResponseStatusCode <- responseStatusCodeEvaluated :?> int32

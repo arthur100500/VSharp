@@ -779,7 +779,20 @@ module public Reflection =
 
         let parameterTypes = Array.concat [parameterTypes; bodyArgs]
 
-        methodBuilder.SetReturnType httpResponseFeatureType
+        let getResponseMethod = httpContextType.GetProperty("Response", instancePublicBindingFlags).GetMethod
+        let httpResponseType = getResponseMethod.ReturnType
+        let getBodyMethod = httpResponseType.GetProperty("Body", instancePublicBindingFlags).GetMethod
+        let getStatusCodeMethod = httpResponseType.GetProperty("StatusCode", instancePublicBindingFlags).GetMethod
+        assert(getResponseMethod <> null)
+        assert(getBodyMethod <> null)
+        assert(getStatusCodeMethod <> null)
+
+        let tupleCreateIntStreamMethod =
+            typeof<Tuple>.GetMethods()
+            |> Array.find (fun (x : MethodInfo) -> x.Name = "Create" && x.GetGenericArguments().Length = 2)
+            |> _.MakeGenericMethod([| typeof<int>; streamType |])
+
+        methodBuilder.SetReturnType tupleCreateIntStreamMethod.ReturnType
         methodBuilder.SetParameters(parameterTypes)
         let ilGenerator = methodBuilder.GetILGenerator()
 
@@ -973,11 +986,18 @@ module public Reflection =
         assert(waitMethod <> null)
         ilGenerator.Emit(OpCodes.Callvirt, waitMethod)
 
-        // Return FeatureCollection.Get<IHttpResponseFeature>()
-        ilGenerator.Emit(OpCodes.Ldloc, featureCollectionLocal)
-        let getResponseMethod = featureCollectionType.GetMethod("Get", instancePublicBindingFlags).MakeGenericMethod(iHttpResponseFeatureType)
+        // Return defaultContextLocal.Response.StatusCode,
+        ilGenerator.Emit(OpCodes.Ldloc, contextLocal)
         assert(getResponseMethod <> null)
         ilGenerator.Emit(OpCodes.Callvirt, getResponseMethod)
+        ilGenerator.Emit(OpCodes.Stloc, httpResponseFeatureLocal)
+
+        // return (response.StatusCode, response.Body);
+        ilGenerator.Emit(OpCodes.Ldloc, httpResponseFeatureLocal)
+        ilGenerator.Emit(OpCodes.Callvirt, getStatusCodeMethod)
+        ilGenerator.Emit(OpCodes.Ldloc, httpResponseFeatureLocal)
+        ilGenerator.Emit(OpCodes.Callvirt, getBodyMethod)
+        ilGenerator.Emit(OpCodes.Call, tupleCreateIntStreamMethod)
         ilGenerator.Emit(OpCodes.Ret)
 
         let t = typeBuilder.CreateType()
