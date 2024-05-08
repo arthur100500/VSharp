@@ -790,7 +790,7 @@ module public Reflection =
         let tupleCreateIntStreamMethod =
             typeof<Tuple>.GetMethods()
             |> Array.find (fun (x : MethodInfo) -> x.Name = "Create" && x.GetGenericArguments().Length = 2)
-            |> _.MakeGenericMethod([| typeof<int>; streamType |])
+            |> fun x -> x.MakeGenericMethod([| typeof<int>; streamType |])
 
         methodBuilder.SetReturnType tupleCreateIntStreamMethod.ReturnType
         methodBuilder.SetParameters(parameterTypes)

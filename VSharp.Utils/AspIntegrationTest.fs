@@ -51,7 +51,7 @@ with
 type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, createCompactRepr : bool) =
     inherit ATest(mockStorage, typeof<webTestInfo>)
     let common = info.common
-    let memoryGraph = MemoryGraph(common.memory, mockStorage, createCompactRepr)
+    let mutable memoryGraph = MemoryGraph(common.memory, mockStorage, createCompactRepr)
     let jsonOptions =
         let options = JsonSerializerOptions()
         options.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
@@ -93,6 +93,10 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
     member x.assemblyPath
         with get() = info.assemblyPath
         and set (value : string) = setViaReflection info "assemblyPath" value
+    override x.RefreshMemoryGraph() =
+        let mem = x.Common.memory
+        x.MemoryGraph.Serialize(mem)
+        memoryGraph <- MemoryGraph(mem, mockStorage, false)
 
     static member DeserializeFromTestInfo(ti : webTestInfo, createCompactRepr : bool) =
         let mockStorage = MockStorage()

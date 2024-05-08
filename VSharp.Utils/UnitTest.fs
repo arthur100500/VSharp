@@ -56,7 +56,7 @@ with
 type UnitTest private (m : MethodBase, info : testInfo, mockStorage : MockStorage, createCompactRepr : bool) =
     inherit ATest(mockStorage, typeof<testInfo>)
     let common = info.common
-    let memoryGraph = MemoryGraph(common.memory, mockStorage, createCompactRepr)
+    let mutable memoryGraph = MemoryGraph(common.memory, mockStorage, createCompactRepr)
     let thisArg = memoryGraph.DecodeValue info.thisArg
     let args = if info.args = null then null else info.args |> Array.map memoryGraph.DecodeValue
     let expectedResult = memoryGraph.DecodeValue info.expectedResult
@@ -115,6 +115,11 @@ type UnitTest private (m : MethodBase, info : testInfo, mockStorage : MockStorag
     override x.MemoryGraph with get() = memoryGraph
 
     member x.ExtraAssemblyLoadDirs with get() = common.extraAssemblyLoadDirs
+
+    override x.RefreshMemoryGraph() =
+        let mem = x.Common.memory
+        x.MemoryGraph.Serialize(mem)
+        memoryGraph <- MemoryGraph(mem, mockStorage, false)
 
     member x.AddArg (arg : ParameterInfo) (value : obj) =
         if info.args = null then

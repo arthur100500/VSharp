@@ -19,6 +19,14 @@ namespace VSharp.TestRunner
 {
     public static class TestRunner
     {
+        private static string RetrieveData(MemoryStream stream)
+        {
+            var bufferField = typeof(MemoryStream).GetField("_buffer", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            var bytes = (byte[])bufferField.GetValue(stream)!;
+            var data = Encoding.UTF8.GetString(bytes).Trim('\0');
+            return data;
+        }
+
         private static unsafe bool CheckResult(object? expected, object? got)
         {
             return (expected, got) switch
@@ -26,6 +34,7 @@ namespace VSharp.TestRunner
                 (Pointer x, Pointer y) => CompareObjects(Pointer.Unbox(x), Pointer.Unbox(y)),
                 (null, Pointer y) => CompareObjects(null, Pointer.Unbox(y)),
                 (Pointer x, null) => CompareObjects(Pointer.Unbox(x), null),
+                (MemoryStream fst, MemoryStream snd) => CompareObjects(RetrieveData(fst), RetrieveData(snd)),
                 _ => CompareObjects(expected, got)
             };
         }

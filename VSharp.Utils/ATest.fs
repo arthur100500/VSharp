@@ -60,6 +60,7 @@ type ATest (mockStorage : MockStorage, testInfoType : Type) =
     abstract Info: obj with get
 
     abstract Expected: obj with get, set
+    abstract RefreshMemoryGraph: unit -> unit
 
     default x.IsError
         with get() = x.Common.isError

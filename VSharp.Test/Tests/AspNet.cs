@@ -322,16 +322,14 @@ namespace IntegrationTests
         }
 
         [TestSvm(expectedCoverage: 100)]
-        public static string JsonSerializeGetsCorrectString(Wallet arg)
+        public static Stream JsonSerializeGetsCorrectStream(Wallet arg)
         {
             if (arg.MoneyAmount < 0)
-                return "failed string";
+                return Stream.Null;
 
             var memoryStream = new MemoryStream();
             JsonSerializer.SerializeAsync(memoryStream, arg).Wait();
-            memoryStream.Position = 0;
-            var reader = new StreamReader(memoryStream);
-            return reader.ReadToEnd();
+            return memoryStream;
         }
     }
 }

@@ -2,6 +2,7 @@ namespace VSharp.Interpreter.IL
 
 open System
 open System.Collections.Generic
+open System.IO
 open System.Reflection
 open System.Text.Json
 open VSharp
@@ -79,7 +80,6 @@ module TestGenerator =
             let referenceRepr : referenceRepr = {index = index.Value}
             referenceRepr :> obj
         else
-            let memoryGraph = test.MemoryGraph
             let cha = ConcreteHeapAddress addr
             match typ with
             | ConcreteType typ when TypeUtils.isDelegate typ ->
@@ -89,7 +89,7 @@ module TestGenerator =
             | ConcreteType typ ->
                 match typ with
                 | TypeUtils.ArrayType(elemType, dim) ->
-                    let index = memoryGraph.ReserveRepresentation()
+                    let index = test.MemoryGraph.ReserveRepresentation()
                     indices.Add(addr, index)
                     let arrayType, (lengths : int array), (lowerBounds : int array) =
                         match dim with
@@ -110,13 +110,13 @@ module TestGenerator =
                     let repr = encodeArr test arrayType addr typ lengths lowerBounds index
                     repr :> obj
                 | _ when typ.IsValueType ->
-                    let index = memoryGraph.ReserveRepresentation()
+                    let index = test.MemoryGraph.ReserveRepresentation()
                     indices.Add(addr, index)
                     let content = BoxedLocation(ConcreteHeapAddress addr, typ) |> eval
-                    let repr = memoryGraph.AddBoxed content index
+                    let repr = test.MemoryGraph.AddBoxed content index
                     repr :> obj
                 | _ when typ = typeof<string> ->
-                    let index = memoryGraph.ReserveRepresentation()
+                    let index = test.MemoryGraph.ReserveRepresentation()
                     indices.Add(addr, index)
                     let length : int = ClassField(cha, Reflection.stringLengthField) |> eval |> unbox
                     let string =
@@ -126,24 +126,25 @@ module TestGenerator =
                                 ArrayIndex(cha, [MakeNumber i], arrayType.CharVector) |> eval |> unbox
                             let contents : char array = Array.init length readChar
                             String(contents)
-                    memoryGraph.AddString index string
+                    test.MemoryGraph.AddString index string
                 | _ when Reflection.isInstanceOfType typ ->
                     // For instance of 'System.Type' or 'System.RuntimeType'
                     encodeType state addr
                 | _ ->
-                    let index = memoryGraph.ReserveRepresentation()
+                    let index = test.MemoryGraph.ReserveRepresentation()
                     indices.Add(addr, index)
                     let fields = Reflection.fieldsOf false typ |> Array.map (fun (field, _) ->
                         ClassField(cha, field) |> eval)
-                    let repr = memoryGraph.AddClass typ fields index
+                    let repr = test.MemoryGraph.AddClass typ fields index
                     repr :> obj
-            | MockType mock when mock.IsValueType -> memoryGraph.RepresentMockedStruct (encodeMock mock) Array.empty
+            | MockType mock when mock.IsValueType -> test.MemoryGraph.RepresentMockedStruct (encodeMock mock) Array.empty
             | MockType mock ->
                 let evalField field = ClassField(cha, field) |> eval
                 addMockToMemoryGraph indices encodeMock (Some evalField) test addr mock
 
     let private encodeArrayCompactly (state : state) (model : model) (encode : term -> obj) (test : ATest) arrayType cha typ lengths lowerBounds index =
         assert(TypeUtils.isArrayType typ)
+        let mutable lengths = lengths
         let memory = state.memory
         if memory.ConcreteMemory.Contains cha then
             // TODO: Use compact representation for big arrays
@@ -232,24 +233,34 @@ module TestGenerator =
                     let decodeJsonString _ (k : updateTreeKey<heapArrayKey, term>) f =
                         let value = k.value
                         match k.key with
-                        | OneArrayIndexKey(address, keyIndices) ->
+                        | OneArrayIndexKey(address, _) ->
                             let heapAddress = model.Eval address
                             match heapAddress, value.term with
                             | {term = ConcreteHeapAddress(cha')}, Constant ({v=name}, _, _) when name.Contains "JsonByte(" && cha' = cha ->
-                                let i = keyIndices |> List.map (encode >> unbox)
-                                let v = value |> JsonDeserialize
-                                v |> model.Eval |> TryTermToObj state |> Option.toObj
+                                let v = value |> JsonDeserialize |> model.Eval |> encode
+                                test.RefreshMemoryGraph()
+                                v |> test.MemoryGraph.DecodeValue
                             | _ -> f
                         | _ -> f
 
-
                     let decodeJsonByte () =
-                        let jsonLength = 100
                         let contents = updates |> RegionTree.foldr decodeJsonString null
-                        defaultValue, [|[0]|], [| 32 :> obj; 41|] // TODO: here
+                        let serialized = JsonSerializer.Serialize(contents)
+                        let bytes = System.Text.Encoding.UTF8.GetBytes(serialized)
+                        let jsonLength = Array.length bytes
+                        let indices = Array.init jsonLength List.singleton
+                        let bytesAsObj = Array.create jsonLength null
+                        Array.iteri (fun i b -> bytesAsObj[i] <- b :> obj) bytes
+                        lengths <- [| jsonLength |]
+                        defaultValue, indices, bytesAsObj
 
-                    // Case for Byte arrays containing JSON-Byte as only element
-                    if values.Length = 1 && true then decodeJsonByte ()
+                    let containsJsonByte _ (k : updateTreeKey<heapArrayKey, term>) f =
+                        match k.value.term with
+                        | Constant ({v=name}, _, _) when name.Contains "JsonByte(" -> true
+                        | _ -> f
+
+                    let arrayContainsJsonByte = updates |> RegionTree.foldr containsJsonByte false
+                    if values.Length = 1 && arrayContainsJsonByte then decodeJsonByte () // TODO: Replace true by correct value
                     else defaultValue, indices.ToArray(), values.ToArray()
                 | None -> null, Array.empty, Array.empty
             let indices = Array.map Array.ofList indices
@@ -468,6 +479,11 @@ module TestGenerator =
             | StateModel modelState -> modelState
             | _ -> __unreachable__()
 
+        let retrieveMemoryStreamBuffer obj =
+            let bufferField = typeof<MemoryStream>.GetField("_buffer", BindingFlags.NonPublic + BindingFlags.Instance)
+            let buffer = bufferField.GetValue(obj) :?> byte array
+            System.Text.Encoding.UTF8.GetString(buffer).Trim(null)
+
         let jsonSerialize = JsonSerializer.Serialize
 
         let fillCorrespondingField (test : ATest) (parameterInfo: ParameterInfo) (concreteValue : obj) =
@@ -477,7 +493,9 @@ module TestGenerator =
             | 1 -> ()
             | 2 -> test.RequestPath <- test.MemoryGraph.DecodeString concreteValue
             | 3 -> test.RequestMethod <- test.MemoryGraph.DecodeString concreteValue
-            | 4 -> test.RequestBody <- test.MemoryGraph.DecodeValue concreteValue |> jsonSerialize
+            | 4 ->
+                test.RefreshMemoryGraph()
+                test.RequestBody <- test.MemoryGraph.DecodeValue concreteValue |> jsonSerialize
             | _ -> failwith "TODO"
 
         // TODO: Set assembly path

@@ -267,7 +267,6 @@ type MockStorage() =
         with get() = mockedTypes
 
 type MemoryGraph(repr : memoryRepr, mockStorage : MockStorage, createCompactRepr : bool) =
-
     let sourceTypes = List<Type>(repr.types |> Array.map (fun t -> t.Decode()))
     let compactRepresentations = Dictionary<obj, CompactArrayRepr>()
     let boxedLocations = HashSet<physicalAddress>()
@@ -449,9 +448,11 @@ type MemoryGraph(repr : memoryRepr, mockStorage : MockStorage, createCompactRepr
         | :? typeRepr
         | :? ValueType
         | :? enumRepr -> ()
+        | null -> ()
         | _ -> internalfail $"decodeObject: unexpected object {obj}"
-
-    let () = Seq.iter2 decodeObject objReprs sourceObjects
+    and updateSourceObjects () =
+        Seq.iter2 decodeObject objReprs sourceObjects
+    let () = updateSourceObjects  ()
 
     member x.DecodeValue (obj : obj) =
         let decoded = decodeValue obj
