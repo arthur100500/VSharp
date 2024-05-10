@@ -20,6 +20,9 @@ namespace VSharp.CSharpUtils
         {
             if (!task.IsCompleted)
                 throw new System.InvalidProgramException();
+
+            if (task.IsFaulted)
+                throw task.Exception!;
         }
     }
 }

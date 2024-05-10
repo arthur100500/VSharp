@@ -22,10 +22,10 @@ module Json =
 
     let serialize (state : state) (args : term list) =
         assert (List.length args = 5)
-        let destination, source = args[1], args[2]
+        let destination, source, options = args[1], args[2], args[3]
         match destination with
         | {term = HeapRef _; hc = _} ->
-            let serializedByte = API.Terms.JsonSerialize source
+            let serializedByte = API.Terms.JsonSerialize source options
             let bufferFieldId = getStreamBufferField state destination
             // TODO: Later maybe merge 2 buffers
             let emptyBuffer = Memory.AllocateDefaultArray state [MakeNumber 1] bufferFieldId.typ
@@ -41,11 +41,11 @@ module Json =
     let serializeOther (state : state) (args : term list) =
         // This serialize is similar and equivalent to one above, but with different arguments
         assert (List.length args = 5)
-        serialize state [args[2]; args[0]; args[1]; args[2]; args[3]]
+        serialize state [args[2]; args[0]; args[1]; args[3]; args[4]]
 
     let deserialize (interpreter: IInterpreter) (cilState : cilState) (args : term list) =
         assert (List.length args = 4)
-        let stream, typ = args[0], args[1]
+        let stream, typ, options = args[0], args[1], args[3]
 
         let resultElseDefault taskResult (fieldInfo : FieldInfo) fieldId fieldType =
             match fieldInfo.Name with
@@ -68,7 +68,7 @@ module Json =
             let bufferFieldId = getStreamBufferField cilState.state stream
             let buffer = Memory.ReadField cilState.state stream bufferFieldId
             let firstElement = Memory.ReadArrayIndex cilState.state buffer [MakeNumber 0] None
-            let taskResult = API.Terms.JsonDeserialize firstElement
+            let taskResult = API.Terms.JsonDeserialize firstElement options
             let typesMatched = concreteTyp = TypeOf taskResult // TODO: More elaborate matching of type (it's json, not strict)
             cilState.StatedConditionalExecutionCIL
                 (fun state k -> k (if typesMatched then True(), state else False(), state))

@@ -331,5 +331,21 @@ namespace IntegrationTests
             JsonSerializer.SerializeAsync(memoryStream, arg).Wait();
             return memoryStream;
         }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static Stream JsonSerializeWithOptionsGetsCorrectStream(Wallet arg)
+        {
+            if (arg.MoneyAmount < 0)
+                return Stream.Null;
+
+            var options = new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            var memoryStream = new MemoryStream();
+            JsonSerializer.SerializeAsync(memoryStream, arg, options).Wait();
+            return memoryStream;
+        }
     }
 }

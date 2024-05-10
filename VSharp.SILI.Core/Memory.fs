@@ -90,23 +90,32 @@ module internal Memory =
 // ------------------------------- Serialization -------------------------------
     [<StructuralEquality;NoComparison>]
     type private jsonStringSource =
-        {object : term}
+        {object : term; options : term}
         interface INonComposableSymbolicConstantSource with
             override x.SubTerms = Seq.empty
             override x.Time = VectorTime.zero
             override x.TypeOfLocation = typeof<int32>
 
-    let jsonSerialize object =
+    let jsonSerialize object options =
         // TODO: Save JsonOptions
         let name = $"JsonByte({object})"
-        let source = {object = object}
+        let source = {object = object; options = options}
         Constant name source typeof<byte>
 
-    let jsonDeserialize object : term =
+    let jsonDeserialize object (options : term) =
         match object.term with
         | Constant (_, source, t) ->
             match source with
-            | :? jsonStringSource as {object = source} -> source
+            // TODO: Compare options correctly
+            | :? jsonStringSource as {object = source; options = _} -> source
+            | _ -> internalfail "Expected jsonStringSource in source"
+        | _ -> internalfail "Expected constant"
+
+    let jsonGetOptions object =
+        match object.term with
+        | Constant (_, source, t) ->
+            match source with
+            | :? jsonStringSource as {object = _; options = options} -> options
             | _ -> internalfail "Expected jsonStringSource in source"
         | _ -> internalfail "Expected constant"
 

@@ -80,6 +80,7 @@ namespace VSharp.TestRunner
                     Console.ResetColor();
                     return true;
                 }
+
                 if (ex != null)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -88,6 +89,7 @@ namespace VSharp.TestRunner
                     Console.ResetColor();
                     return false;
                 }
+
                 if (checkResult && !test.IsError && !checkResultFunc(test, result))
                 {
                     // TODO: use NUnit?
@@ -103,7 +105,8 @@ namespace VSharp.TestRunner
             {
                 test.ReverseExternMocks(); // reverses if ex was thrown
                 var exceptionExpected = e.InnerException != null && e.InnerException.GetType() == ex;
-                if (exceptionExpected || test.IsError && suiteType == SuiteType.TestsAndErrors && !fileMode) {
+                if (exceptionExpected || test.IsError && suiteType == SuiteType.TestsAndErrors && !fileMode)
+                {
                     Console.ForegroundColor = ConsoleColor.Green;
                     var exceptionType = e.InnerException?.GetType().FullName;
                     Console.WriteLine($"Test {fileInfo.Name} throws the expected exception {exceptionType}!");
@@ -112,7 +115,8 @@ namespace VSharp.TestRunner
                 else if (e.InnerException != null && ex != null)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.Error.WriteLine($"Test {fileInfo.Name} throws {e.InnerException} when the expected exception was {ex}!");
+                    Console.Error.WriteLine(
+                        $"Test {fileInfo.Name} throws {e.InnerException} when the expected exception was {ex}!");
                     Console.ResetColor();
                     throw e.InnerException;
                 }
@@ -122,6 +126,7 @@ namespace VSharp.TestRunner
             {
                 test.ReverseExternMocks();
             }
+
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Out.WriteLine($"{fileInfo.Name} passed!");
             Console.ResetColor();
@@ -133,9 +138,11 @@ namespace VSharp.TestRunner
         {
             var test = (AspIntegrationTest)rawTest;
             // Should be stored in .vswt
-            var assemblyPath = @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.dll";
+            var assemblyPath =
+                @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.dll";
             var sourceProjectPath = @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi";
-            var depsPath = @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.deps.json";
+            var depsPath =
+                @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.deps.json";
             var requestPath = test.RequestPath;
             var requestMethod = test.RequestMethod;
             var requestBody = test.RequestBody;
@@ -162,7 +169,8 @@ namespace VSharp.TestRunner
                     .UseConfiguration(new ConfigurationBuilder().SetBasePath(sourceProjectPath).Build());
             }
 
-            factory = withWebHostBuilderMethod!.Invoke(factory, new object[] { (Action<IWebHostBuilder>)WebHostBuilder });
+            factory = withWebHostBuilderMethod!.Invoke(factory,
+                new object[] { (Action<IWebHostBuilder>)WebHostBuilder });
 
             Environment.CurrentDirectory = sourceProjectPath;
 
@@ -170,10 +178,12 @@ namespace VSharp.TestRunner
             const string manifestPath = "./MvcTestingAppManifest.json";
             var mvcTestingManifestExists = File.Exists(manifestPath);
             if (!mvcTestingManifestExists) File.WriteAllText(manifestPath, "{ }");
-            var mvcTestingManifestEntries = JsonSerializer.Deserialize<IDictionary<string, string>>(File.ReadAllBytes(manifestPath))!;
+            var mvcTestingManifestEntries =
+                JsonSerializer.Deserialize<IDictionary<string, string>>(File.ReadAllBytes(manifestPath))!;
             mvcTestingManifestEntries.TryAdd(catPhotoAssembly.FullName!, sourceProjectPath);
             var indentedOption = new JsonSerializerOptions { WriteIndented = true };
-            var mvcTestingManifestEntriesSerialized = JsonSerializer.Serialize(mvcTestingManifestEntries, indentedOption);
+            var mvcTestingManifestEntriesSerialized =
+                JsonSerializer.Serialize(mvcTestingManifestEntries, indentedOption);
             File.WriteAllText(manifestPath, mvcTestingManifestEntriesSerialized);
 
             // Create client and send request
@@ -193,27 +203,29 @@ namespace VSharp.TestRunner
 
             var message = new HttpRequestMessage(requestMethodTyped!, requestPath);
             message.Content = content;
-            var response = client.SendAsync(message).Result;
-            return response;
+            try { var response = client.SendAsync(message).Result; return response; }
+            catch (Exception e) { throw new TargetInvocationException(e);}
         }
 
-        private static bool CheckAspNetResult(ATest testRaw, object resultRaw)
+        private static bool CheckAspNetResult(ATest testRaw, object? resultRaw)
         {
             var test = (AspIntegrationTest)testRaw;
-            var result = (HttpResponseMessage)resultRaw;
+            var result = (HttpResponseMessage)resultRaw!;
             // Currently checking only status code and body.
             // TODO: Check headers and other components of response
             var expectedStatusCode = test.ResponseStatusCode;
             var resultStatusCode = (int)result.StatusCode;
             if (!CheckResult(expectedStatusCode, resultStatusCode)) return false;
 
-            var expectedBody = (string)test.ResponseBody;
+            var expectedBody = test.ResponseBody;
             var resultBody = result.Content.ReadAsStringAsync().Result;
+
 
             return expectedBody == resultBody;
         }
 
-        private static bool ReproduceWebTest(FileInfo fileInfo, SuiteType suiteType, bool checkResult, bool fileMode = false)
+        private static bool ReproduceWebTest(FileInfo fileInfo, SuiteType suiteType, bool checkResult,
+            bool fileMode = false)
         {
             try
             {
@@ -224,15 +236,13 @@ namespace VSharp.TestRunner
 
                 var requestMethod = test.RequestMethod;
                 var requestPath = test.RequestPath;
-                var requestBody = test.RequestBody;
-                var responseBody = test.ResponseBody;
-                var responseStatusCode = test.ResponseStatusCode;
 
                 Console.Out.WriteLine($"Starting reproducing {fileInfo.Name} ({requestMethod} {requestPath})");
                 if (!checkResult) Console.Out.WriteLine("Result check is disabled");
                 if (suiteType == SuiteType.TestsOnly) Console.Out.WriteLine("Error reproducing is disabled");
 
-                return ReproduceInitializedTest(test, suiteType, checkResult, fileInfo, RunAspNetTest, CheckAspNetResult, fileMode);
+                return ReproduceInitializedTest(test, suiteType, checkResult, fileInfo, RunAspNetTest,
+                    CheckAspNetResult, fileMode);
             }
             catch (Exception e)
             {
@@ -243,7 +253,8 @@ namespace VSharp.TestRunner
             }
         }
 
-        private static bool ReproduceTest(FileInfo fileInfo, SuiteType suiteType, bool checkResult, bool fileMode = false)
+        private static bool ReproduceTest(FileInfo fileInfo, SuiteType suiteType, bool checkResult,
+            bool fileMode = false)
         {
             try
             {
@@ -269,7 +280,6 @@ namespace VSharp.TestRunner
                 object? Run(ATest target) => method.Invoke(((UnitTest)target).ThisArg, parameters);
 
                 bool CheckUnitTest(ATest target, object result) => CheckResult(((UnitTest)target).Expected, result);
-
             }
             catch (Exception e)
             {
@@ -285,10 +295,13 @@ namespace VSharp.TestRunner
             return ReproduceTest(file, SuiteType.TestsAndErrors, checkResult, true);
         }
 
-        public static bool ReproduceTests(DirectoryInfo testsDir, SuiteType suiteType = SuiteType.TestsAndErrors, bool recursive = false)
+        public static bool ReproduceTests(DirectoryInfo testsDir, SuiteType suiteType = SuiteType.TestsAndErrors,
+            bool recursive = false)
         {
-            var unitTests = SearchByExtension("vst").ToList();;
-            var aspIntegrationTests = SearchByExtension("vswt").ToList();;
+            var unitTests = SearchByExtension("vst").ToList();
+            ;
+            var aspIntegrationTests = SearchByExtension("vswt").ToList();
+            ;
 
 
             if (unitTests.Count == 0 && aspIntegrationTests.Count == 0)
@@ -309,7 +322,8 @@ namespace VSharp.TestRunner
 
             return result;
 
-            IEnumerable<FileInfo> SearchByExtension(string extension) => testsDir.EnumerateFiles($"*.{extension}", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+            IEnumerable<FileInfo> SearchByExtension(string extension) => testsDir.EnumerateFiles($"*.{extension}",
+                recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
         }
     }
 }

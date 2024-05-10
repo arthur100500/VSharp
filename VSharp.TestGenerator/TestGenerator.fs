@@ -5,6 +5,7 @@ open System.Collections.Generic
 open System.IO
 open System.Reflection
 open System.Text.Json
+open System.Xml.Serialization
 open VSharp
 open VSharp.Core
 open System.Linq
@@ -142,6 +143,28 @@ module TestGenerator =
                 let evalField field = ClassField(cha, field) |> eval
                 addMockToMemoryGraph indices encodeMock (Some evalField) test addr mock
 
+    (* Create a semi-copy of the json options given with only some fields *)
+    let copyJsonOptions source =
+        let bindingFlags = BindingFlags.Instance + BindingFlags.NonPublic + BindingFlags.Public
+        let fields = source.GetType().GetFields(bindingFlags)
+        let getValue name = fields |> Array.find (fun x -> x.Name = name) |> (_.GetValue(source))
+        // Booleans and integers are critical yet easy to copy
+        let simpleFields = fields |> Array.filter (_.FieldType.IsValueType)
+        let jsonNamingPolicies = typeof<JsonNamingPolicy>.Assembly |> fun a -> a.GetTypes() |> Array.filter (_.IsSubclassOf(typeof<JsonNamingPolicy>))
+        let namingPolicyOfName name = jsonNamingPolicies |> Array.find (fun x -> x.Name = name)
+        let propertyNamingPolicy = getValue "_jsonPropertyNamingPolicy" |> _.GetType().Name |> namingPolicyOfName
+        let dictionaryNamingPolicy = getValue "_jsonPropertyNamingPolicy" |> _.GetType().Name |> namingPolicyOfName
+        let targetJsonOptions = JsonSerializerOptions()
+        let targetFields = targetJsonOptions.GetType().GetFields(bindingFlags)
+        // Assign naming policies
+        targetJsonOptions.PropertyNamingPolicy <- Activator.CreateInstance(propertyNamingPolicy) :?> JsonNamingPolicy
+        targetJsonOptions.DictionaryKeyPolicy <- Activator.CreateInstance(dictionaryNamingPolicy) :?> JsonNamingPolicy
+        // Assign simple fields
+        let assignField (fi : FieldInfo) = targetFields |> Array.find (fun f -> f.Name = fi.Name) |> (_.SetValue(targetJsonOptions, fi.GetValue(source)))
+        Array.iter assignField simpleFields
+        targetJsonOptions
+
+
     let private encodeArrayCompactly (state : state) (model : model) (encode : term -> obj) (test : ATest) arrayType cha typ lengths lowerBounds index =
         assert(TypeUtils.isArrayType typ)
         let mutable lengths = lengths
@@ -237,15 +260,20 @@ module TestGenerator =
                             let heapAddress = model.Eval address
                             match heapAddress, value.term with
                             | {term = ConcreteHeapAddress(cha')}, Constant ({v=name}, _, _) when name.Contains "JsonByte(" && cha' = cha ->
-                                let v = value |> JsonDeserialize |> model.Eval |> encode
+                                let options = JsonGetOptions value
+                                let value = value |> fun s -> JsonDeserialize s options |> model.Eval |> encode
+                                let options = options |> model.Eval |> encode
                                 test.RefreshMemoryGraph()
-                                v |> test.MemoryGraph.DecodeValue
+                                let value = value |> test.MemoryGraph.DecodeValue
+                                let options = options |> test.MemoryGraph.DecodeValue
+                                let optionsConverted = copyJsonOptions options
+                                (value, optionsConverted)
                             | _ -> f
                         | _ -> f
 
                     let decodeJsonByte () =
-                        let contents = updates |> RegionTree.foldr decodeJsonString null
-                        let serialized = JsonSerializer.Serialize(contents)
+                        let contents, options = updates |> RegionTree.foldr decodeJsonString (null, null)
+                        let serialized = JsonSerializer.Serialize(contents, options=options)
                         let bytes = System.Text.Encoding.UTF8.GetBytes(serialized)
                         let jsonLength = Array.length bytes
                         let indices = Array.init jsonLength List.singleton
@@ -484,7 +512,12 @@ module TestGenerator =
             let buffer = bufferField.GetValue(obj) :?> byte array
             System.Text.Encoding.UTF8.GetString(buffer).Trim(null)
 
-        let jsonSerialize = JsonSerializer.Serialize
+        let ocamlCaseJsonOptions =
+            let options = JsonSerializerOptions()
+            options.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
+            options
+
+        let jsonSerialize argument = JsonSerializer.Serialize(argument, options=ocamlCaseJsonOptions)
 
         let fillCorrespondingField (test : ATest) (parameterInfo: ParameterInfo) (concreteValue : obj) =
             let test = test :?> AspIntegrationTest
@@ -526,37 +559,19 @@ module TestGenerator =
                   typ = memoryStreamBufferField.FieldType }
             bufferFieldId
 
-        let isJsonByte buffer =
-            let zero = MakeNumber 0
-            let firstElement = Memory.ReadArrayIndex info.state buffer [zero] None
-            match firstElement.term with
-            | Constant ({v=name}, _, _) when name.Contains "JsonByte(" -> true
-            | _ -> false
-
         let setExpected (test : ATest) _ =
             let test = test :?> AspIntegrationTest
             let response = Memory.StateResult info.state |> info.model.Eval
             let responseType = TypeOf response
             let bodyField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "m_Item2") |> fst
-
             let responseBody = Memory.ReadField info.state response bodyField
             let bufferFieldId = getStreamBufferField info.state responseBody
             let buffer = Memory.ReadField info.state responseBody bufferFieldId
-            let zero = MakeNumber 0
-            let one = MakeNumber 1
-            let bufferLength = Memory.CountOfArrayElements info.state buffer
-            match bufferLength with
-            | o when o = one && isJsonByte buffer ->
-                let firstElement = Memory.ReadArrayIndex info.state buffer [zero] None
-                let taskResult = JsonDeserialize firstElement
-                let taskResultEvaluated = taskResult |> term2obj info
-                test.ResponseBody <- taskResultEvaluated
-            | z when z = zero ->
-                let emptyString = Memory.AllocateEmptyString info.state zero
-                let emptyString = term2obj info emptyString
-                test.ResponseBody <- emptyString
-            | _ ->
-                () // TODO: Figure out a way to propagate message from stream here
+            let encodedBuffer = term2obj info buffer
+            test.RefreshMemoryGraph()
+            let bufferContents = test.MemoryGraph.DecodeValue encodedBuffer :?> byte array
+            let bufferStringContents = System.Text.Encoding.UTF8.GetString(bufferContents)
+            test.ResponseBody <- bufferStringContents
             let responseStatusCodeField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "m_Item1") |> fst
             let responseStatusCode = Memory.ReadField info.state response responseStatusCodeField
             let responseStatusCodeEvaluated = responseStatusCode |> term2obj info

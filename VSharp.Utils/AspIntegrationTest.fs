@@ -24,7 +24,7 @@ type webTestInfo = {
     requestPath : string
     requestMethod : string
     requestBody: string
-    responseBody: obj
+    responseBody: string
     responseStatusCode: int32
 }
 with
@@ -52,10 +52,6 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
     inherit ATest(mockStorage, typeof<webTestInfo>)
     let common = info.common
     let mutable memoryGraph = MemoryGraph(common.memory, mockStorage, createCompactRepr)
-    let jsonOptions =
-        let options = JsonSerializerOptions()
-        options.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
-        options
     let setViaReflection target propertyName newValue =
         let t = target.GetType()
         let p = t.GetProperty(propertyName)
@@ -80,13 +76,8 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
         with get() = info.requestMethod
         and set (value : string) = setViaReflection info "requestMethod" value
     member x.ResponseBody
-        with get() =
-            if isNull info.responseBody |> not then
-                x.MemoryGraph.DecodeValue info.responseBody
-                |> fun x -> JsonSerializer.Serialize(x, jsonOptions)
-                |> fun x -> x :> obj
-                else info.responseBody
-        and set (value : obj) = setViaReflection info "responseBody" value
+        with get() = info.responseBody
+        and set (value : string) = setViaReflection info "responseBody" value
     member x.ResponseStatusCode
         with get() = info.responseStatusCode
         and set (value : int32) = setViaReflection info "responseStatusCode" value
