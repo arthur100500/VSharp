@@ -871,7 +871,7 @@ type ILInterpreter() as this =
             |> Seq.map (fun x -> x.GetMethods())
             |> Seq.concat
 
-        let researchedController = controllerMethods |> Seq.head
+        let researchedController = controllerMethods |> Seq.item 2
         let controllerParameters = researchedController.GetParameters()
 
         cilState.ClearStack()

@@ -347,5 +347,21 @@ namespace IntegrationTests
             JsonSerializer.SerializeAsync(memoryStream, arg, options).Wait();
             return memoryStream;
         }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static Wallet MutateValuePassThrough(Wallet w)
+        {
+            w.MoneyAmount = w.MoneyAmount + 20;
+            return w;
+        }
+
+        [TestSvm(expectedCoverage: 100)]
+        public static Stream MutableSerializedPassThrough(Wallet w)
+        {
+            var result = MutateValuePassThrough(w);
+            var memoryStream = new MemoryStream();
+            JsonSerializer.SerializeAsync(memoryStream, result).Wait();
+            return memoryStream;
+        }
     }
 }

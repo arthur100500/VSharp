@@ -145,24 +145,28 @@ module TestGenerator =
 
     (* Create a semi-copy of the json options given with only some fields *)
     let copyJsonOptions source =
-        let bindingFlags = BindingFlags.Instance + BindingFlags.NonPublic + BindingFlags.Public
-        let fields = source.GetType().GetFields(bindingFlags)
-        let getValue name = fields |> Array.find (fun x -> x.Name = name) |> (_.GetValue(source))
-        // Booleans and integers are critical yet easy to copy
-        let simpleFields = fields |> Array.filter (_.FieldType.IsValueType)
-        let jsonNamingPolicies = typeof<JsonNamingPolicy>.Assembly |> fun a -> a.GetTypes() |> Array.filter (_.IsSubclassOf(typeof<JsonNamingPolicy>))
-        let namingPolicyOfName name = jsonNamingPolicies |> Array.find (fun x -> x.Name = name)
-        let propertyNamingPolicy = getValue "_jsonPropertyNamingPolicy" |> _.GetType().Name |> namingPolicyOfName
-        let dictionaryNamingPolicy = getValue "_jsonPropertyNamingPolicy" |> _.GetType().Name |> namingPolicyOfName
-        let targetJsonOptions = JsonSerializerOptions()
-        let targetFields = targetJsonOptions.GetType().GetFields(bindingFlags)
-        // Assign naming policies
-        targetJsonOptions.PropertyNamingPolicy <- Activator.CreateInstance(propertyNamingPolicy) :?> JsonNamingPolicy
-        targetJsonOptions.DictionaryKeyPolicy <- Activator.CreateInstance(dictionaryNamingPolicy) :?> JsonNamingPolicy
-        // Assign simple fields
-        let assignField (fi : FieldInfo) = targetFields |> Array.find (fun f -> f.Name = fi.Name) |> (_.SetValue(targetJsonOptions, fi.GetValue(source)))
-        Array.iter assignField simpleFields
-        targetJsonOptions
+        // If source is null we just assume it's JsonSerializerOptions.Default
+        match source with
+        | s when isNull s |> not ->
+            let bindingFlags = BindingFlags.Instance + BindingFlags.NonPublic + BindingFlags.Public
+            let fields = source.GetType().GetFields(bindingFlags)
+            let getValue name = fields |> Array.find (fun x -> x.Name = name) |> (fun x -> x.GetValue(source))
+            // Booleans and integers are critical yet easy to copy
+            let simpleFields = fields |> Array.filter (fun x -> x.FieldType.IsValueType)
+            let jsonNamingPolicies = typeof<JsonNamingPolicy>.Assembly |> fun a -> a.GetTypes() |> Array.filter (fun x -> x.IsSubclassOf(typeof<JsonNamingPolicy>))
+            let namingPolicyOfName name = jsonNamingPolicies |> Array.find (fun x -> x.Name = name)
+            let propertyNamingPolicy = getValue "_jsonPropertyNamingPolicy" |> fun x -> x.GetType().Name |> namingPolicyOfName
+            let dictionaryNamingPolicy = getValue "_jsonPropertyNamingPolicy" |> fun x -> x.GetType().Name |> namingPolicyOfName
+            let targetJsonOptions = JsonSerializerOptions()
+            let targetFields = targetJsonOptions.GetType().GetFields(bindingFlags)
+            // Assign naming policies
+            targetJsonOptions.PropertyNamingPolicy <- Activator.CreateInstance(propertyNamingPolicy) :?> JsonNamingPolicy
+            targetJsonOptions.DictionaryKeyPolicy <- Activator.CreateInstance(dictionaryNamingPolicy) :?> JsonNamingPolicy
+            // Assign simple fields
+            let assignField (fi : FieldInfo) = targetFields |> Array.find (fun f -> f.Name = fi.Name) |> (fun x -> x.SetValue(targetJsonOptions, fi.GetValue(source)))
+            Array.iter assignField simpleFields
+            targetJsonOptions
+        | _ -> JsonSerializerOptions.Default
 
 
     let private encodeArrayCompactly (state : state) (model : model) (encode : term -> obj) (test : ATest) arrayType cha typ lengths lowerBounds index =
@@ -220,11 +224,26 @@ module TestGenerator =
                         | _ when isSuitableElem value |> not -> ()
                         | OneArrayIndexKey(address, keyIndices) ->
                             let heapAddress = model.Eval address
-                            match heapAddress with
-                            | {term = ConcreteHeapAddress(cha')} when cha' = cha ->
+                            match heapAddress, value.term with
+                            | {term = ConcreteHeapAddress(cha')}, Constant ({v=name}, _, _) when name.Contains "JsonByte(" && cha' = cha ->
+                                // Special case for Json
+                                let options = JsonGetOptions value
+                                let value = value |> fun s -> JsonDeserialize s options |> model.Eval |> encode
+                                let options = options |> model.Eval |> encode
+                                test.RefreshMemoryGraph()
+                                let value = value |> test.MemoryGraph.DecodeValue
+                                let options = options |> test.MemoryGraph.DecodeValue
+                                let optionsConverted = copyJsonOptions options
+                                let serialized = JsonSerializer.Serialize(value, options=optionsConverted)
+                                let bytes = System.Text.Encoding.UTF8.GetBytes(serialized)
+                                let jsonLength = Array.length bytes
+                                for i in [0..jsonLength - 1] do
+                                    indicesWithValues[[i]] <- bytes[i]
+                                lengths[0] <- jsonLength
+                            | {term = ConcreteHeapAddress(cha')}, _ when cha' = cha ->
                                 let i = keyIndices |> List.map (encode >> unbox)
-                                let v = encode value
                                 if checkArrayIndex i then
+                                    let v = encode value
                                     indicesWithValues[i] <- v
                             | _ -> ()
                         | RangeArrayIndexKey(address, fromIndices, toIndices) ->
@@ -252,44 +271,7 @@ module TestGenerator =
                     updates |> RegionTree.foldr addOneKey ()
                     let indices = indicesWithValues.Keys.ToArray()
                     let values = indicesWithValues.Values.ToArray()
-
-                    let decodeJsonString _ (k : updateTreeKey<heapArrayKey, term>) f =
-                        let value = k.value
-                        match k.key with
-                        | OneArrayIndexKey(address, _) ->
-                            let heapAddress = model.Eval address
-                            match heapAddress, value.term with
-                            | {term = ConcreteHeapAddress(cha')}, Constant ({v=name}, _, _) when name.Contains "JsonByte(" && cha' = cha ->
-                                let options = JsonGetOptions value
-                                let value = value |> fun s -> JsonDeserialize s options |> model.Eval |> encode
-                                let options = options |> model.Eval |> encode
-                                test.RefreshMemoryGraph()
-                                let value = value |> test.MemoryGraph.DecodeValue
-                                let options = options |> test.MemoryGraph.DecodeValue
-                                let optionsConverted = copyJsonOptions options
-                                (value, optionsConverted)
-                            | _ -> f
-                        | _ -> f
-
-                    let decodeJsonByte () =
-                        let contents, options = updates |> RegionTree.foldr decodeJsonString (null, null)
-                        let serialized = JsonSerializer.Serialize(contents, options=options)
-                        let bytes = System.Text.Encoding.UTF8.GetBytes(serialized)
-                        let jsonLength = Array.length bytes
-                        let indices = Array.init jsonLength List.singleton
-                        let bytesAsObj = Array.create jsonLength null
-                        Array.iteri (fun i b -> bytesAsObj[i] <- b :> obj) bytes
-                        lengths <- [| jsonLength |]
-                        defaultValue, indices, bytesAsObj
-
-                    let containsJsonByte _ (k : updateTreeKey<heapArrayKey, term>) f =
-                        match k.value.term with
-                        | Constant ({v=name}, _, _) when name.Contains "JsonByte(" -> true
-                        | _ -> f
-
-                    let arrayContainsJsonByte = updates |> RegionTree.foldr containsJsonByte false
-                    if values.Length = 1 && arrayContainsJsonByte then decodeJsonByte () // TODO: Replace true by correct value
-                    else defaultValue, indices.ToArray(), values.ToArray()
+                    defaultValue, indices.ToArray(), values.ToArray()
                 | None -> null, Array.empty, Array.empty
             let indices = Array.map Array.ofList indices
             test.MemoryGraph.AddCompactArrayRepresentation typ defaultValue indices values lengths lowerBounds index
@@ -561,7 +543,7 @@ module TestGenerator =
 
         let setExpected (test : ATest) _ =
             let test = test :?> AspIntegrationTest
-            let response = Memory.StateResult info.state |> info.model.Eval
+            let response = Memory.StateResult info.state
             let responseType = TypeOf response
             let bodyField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "m_Item2") |> fst
             let responseBody = Memory.ReadField info.state response bodyField

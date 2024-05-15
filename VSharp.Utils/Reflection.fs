@@ -801,7 +801,6 @@ module public Reflection =
         let featureCollectionLocal = ilGenerator.DeclareLocal(featureCollectionType)
         let httpRequestFeatureLocal = ilGenerator.DeclareLocal(httpRequestFeatureType)
         let httpResponseFeatureLocal = ilGenerator.DeclareLocal(httpResponseFeatureType)
-        let bodyArgumentLocal = ilGenerator.DeclareLocal(typeof<byte>)
         let httpResponseBodyFeatureLocal = ilGenerator.DeclareLocal(streamResponseBodyFeatureType)
         let contextLocal = ilGenerator.DeclareLocal(httpContextType)
 
