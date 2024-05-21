@@ -4,6 +4,7 @@ open System
 open System.Collections.Generic
 open System.Reflection
 open System.Reflection.Emit
+open System.Reflection.Metadata
 open System.Runtime.InteropServices
 open System.Text.Json
 
@@ -713,6 +714,7 @@ module public Reflection =
 
     let createAspNetStartMethod (requestDelegateType : Type) (iHttpContextFactoryType : Type) (parameters : ParameterInfo array) =
         // Getting all needed types and assemblies
+        //#region Get Types
         let assemblies = AssemblyManager.GetAssemblies()
         let httpAssembly =
             assemblies |> Seq.find (fun a -> a.FullName.Contains("Microsoft.AspNetCore.Http,"))
@@ -758,14 +760,46 @@ module public Reflection =
         let typeBuilder = dynamicModule.Value.DefineType(typeName, typeAttributes.Value)
         let methodName = $"AspNetStartMethod{Guid.NewGuid()}"
         let methodBuilder = typeBuilder.DefineMethod(methodName, methodAttributes.Value)
+        //#endregion
+
+        let containsAttribute name (parameter : ParameterInfo) =
+            parameter.CustomAttributes |> Seq.tryFind (fun attrib -> attrib.AttributeType.Name = $"Microsoft.AspNetCore.Mvc.{name}Attribute") |> Option.isSome
+
+        // Position counting initial args
+        let inline positionOfPI (pi : ParameterInfo) = pi.Position + 4
+
+        // Gets name from custom attributes
+        let inline getOverridingName (attributes : CustomAttributeData seq) =
+            let modelNameProvider = "IModelNameProvider"
+            let fetchName (source : CustomAttributeData) =
+                let nameArgument = source.NamedArguments |> Seq.tryFind (fun x -> x.MemberName = "Name")
+                nameArgument.Value.TypedValue.ToString()
+            let containsModelNameProvider interfaces =
+                Seq.tryFind (fun (i : Type) -> i.Name = modelNameProvider) interfaces |> Option.isSome
+            let renames = attributes |> Seq.filter (fun a -> a.AttributeType.GetInterfaces() |> containsModelNameProvider)
+            Seq.tryLast renames |> Option.map fetchName
 
         // Split controller arguments
-        // TODO: FromQuery, FromPath, FromHeaders etc
-        let bodyArgs, otherArgs =
-            parameters
-            |> Array.partition (fun x -> x.CustomAttributes |> Seq.tryFind (fun x -> x.AttributeType.Name.Contains("FromBody")) |> Option.isSome)
+        let bodyArgOption = Array.tryFind (containsAttribute "FromBody") parameters
+        let headerArgs = Array.filter (containsAttribute "FromHeader") parameters
+        let queryArgs = Array.filter (containsAttribute "FromQuery") parameters
+        let formArgs = Array.filter (containsAttribute "FromForm") parameters
+        let routeArgs = Array.filter (containsAttribute "FromRoute") parameters
 
-        let bodyArgs : Type array = Array.map (fun (t : ParameterInfo)  -> t.ParameterType) bodyArgs
+        // Leave only simple type args like string int etc
+        let inline isSimple (t : Type) = t.IsPrimitive  || t.Equals(typeof<string>)
+        let inline isSimplePI (pi : ParameterInfo) = isSimple pi.ParameterType
+        let headerSimpleArgs = Array.filter isSimplePI headerArgs
+        let querySimpleArgs = Array.filter isSimplePI queryArgs
+        let formSimpleArgs = Array.filter isSimplePI formArgs
+        let routeSimpleArgs = Array.filter isSimplePI routeArgs
+
+        // Simple types go straight to dictionaries
+        // Complex types don't go anywhere
+        // TODO: In future translate access to header keys as access to values in an object
+
+        // All arguments treated equally
+        let controllerArguments : Type array = Array.map (fun (t : ParameterInfo) -> t.ParameterType) parameters
 
         // Setting arguments
         let parameterTypes = [|
@@ -773,11 +807,13 @@ module public Reflection =
             requestDelegateType
             // IHttpContextFactory
             iHttpContextFactoryType
-            // Path, Method
-            typeof<string>; typeof<string>
+            // Path
+            typeof<string>
+            // Method
+            typeof<string>
         |]
 
-        let parameterTypes = Array.concat [parameterTypes; bodyArgs]
+        let parameterTypes = Array.concat [parameterTypes; controllerArguments]
 
         let getResponseMethod = httpContextType.GetProperty("Response", instancePublicBindingFlags).GetMethod
         let httpResponseType = getResponseMethod.ReturnType
@@ -804,7 +840,8 @@ module public Reflection =
         let httpResponseBodyFeatureLocal = ilGenerator.DeclareLocal(streamResponseBodyFeatureType)
         let contextLocal = ilGenerator.DeclareLocal(httpContextType)
 
-        // var memoryStreamLocal = new MemoryStream();
+        // Runs serialization if body arguments if body is not None
+//      //#region JsonSerializer Serialize
         let memoryStreamCtor = memoryStreamType.GetConstructor(Array.empty)
         ilGenerator.Emit(OpCodes.Newobj, memoryStreamCtor)
         ilGenerator.Emit(OpCodes.Stloc, memoryStreamLocal)
@@ -825,35 +862,45 @@ module public Reflection =
             && parameters.[2].Name = "options"
             && parameters.[3].Name = "cancellationToken"
 
-        let serializeMethod =
-            Array.find findSerializeAsync jsonSerializerTypeMethods
-            |> (fun m -> m.MakeGenericMethod(bodyArgs))
+        match bodyArgOption with
+        | Some bodyArg ->
+            // Serialization is only required if body argument exists
+            // Otherwise json is optional
+            let serializeMethod =
+                Array.find findSerializeAsync jsonSerializerTypeMethods
+                |> (fun m -> m.MakeGenericMethod(bodyArg.ParameterType))
 
-        let cancellationTokenType = serializeMethod.GetParameters().[3].ParameterType
+            let cancellationTokenType = serializeMethod.GetParameters().[3].ParameterType
 
-        let taskType = serializeMethod.ReturnType
-        let taskWaitMethod = taskType.GetMethods() |> Array.find (fun x -> x.Name = "Wait" && x.GetParameters().Length = 0)
+            let taskType = serializeMethod.ReturnType
+            let taskWaitMethod = taskType.GetMethods() |> Array.find (fun x -> x.Name = "Wait" && x.GetParameters().Length = 0)
 
-        // TODO: Move up and clean up
-        let cancellationTokenLocal = ilGenerator.DeclareLocal(cancellationTokenType)
+            // TODO: Move up and clean up
+            let cancellationTokenLocal = ilGenerator.DeclareLocal(cancellationTokenType)
 
-        ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
-        ilGenerator.Emit(OpCodes.Ldarg, 4)
-        ilGenerator.Emit(OpCodes.Ldnull)
-        ilGenerator.Emit(OpCodes.Ldloca_S, cancellationTokenLocal)
-        ilGenerator.Emit(OpCodes.Initobj, cancellationTokenType)
-        ilGenerator.Emit(OpCodes.Ldloc, cancellationTokenLocal)
-        ilGenerator.Emit(OpCodes.Call, serializeMethod)
-        ilGenerator.Emit(OpCodes.Callvirt, taskWaitMethod)
+            // JsonSerializer.Serialize(memoryStreamLocal, arg4)
+            ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
+            ilGenerator.Emit(OpCodes.Ldarg, 4)
+            ilGenerator.Emit(OpCodes.Ldnull)
+            ilGenerator.Emit(OpCodes.Ldloca_S, cancellationTokenLocal)
+            ilGenerator.Emit(OpCodes.Initobj, cancellationTokenType)
+            ilGenerator.Emit(OpCodes.Ldloc, cancellationTokenLocal)
+            ilGenerator.Emit(OpCodes.Call, serializeMethod)
+            ilGenerator.Emit(OpCodes.Callvirt, taskWaitMethod)
 
-        // memoryStreamLocal.Position = 0;
-        ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
-        ilGenerator.Emit(OpCodes.Ldc_I4_0)
-        ilGenerator.Emit(OpCodes.Conv_I8)
-        let streamPositionProperty = memoryStreamType.GetProperty("Position", instancePublicBindingFlags)
-        let streamPositionSetMethod = streamPositionProperty.SetMethod
-        ilGenerator.Emit(OpCodes.Callvirt, streamPositionSetMethod)
+            // memoryStreamLocal.Position = 0;
+            ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
+            ilGenerator.Emit(OpCodes.Ldc_I4_0)
+            ilGenerator.Emit(OpCodes.Conv_I8)
+            let streamPositionProperty = memoryStreamType.GetProperty("Position", instancePublicBindingFlags)
+            let streamPositionSetMethod = streamPositionProperty.SetMethod
+            ilGenerator.Emit(OpCodes.Callvirt, streamPositionSetMethod)
+        | None -> ()
+        //#endregion
 
+        // var featureCollectionLocal = new FeatureCollection();
+        // var httpRequestFeatureLocal = new HttpRequestFeature();
+//      //#region Create FeatureCollection and RequestFeature
         // var featureCollectionLocal = new FeatureCollection();
         let featureCollectionCtor = featureCollectionType.GetConstructor(Array.empty)
         ilGenerator.Emit(OpCodes.Newobj, featureCollectionCtor)
@@ -863,10 +910,12 @@ module public Reflection =
         let httpRequestFeatureCtor = httpRequestFeatureType.GetConstructor(Array.empty)
         ilGenerator.Emit(OpCodes.Newobj, httpRequestFeatureCtor)
         ilGenerator.Emit(OpCodes.Stloc, httpRequestFeatureLocal)
+        //#endregion
 
         // httpRequestFeature.Headers.Add("Content-Type", "application/json");
         // httpRequestFeature.Headers.Add("Content-Length", "2");
         // httpRequestFeature.Headers.Add("Host", "127.0.0.1:5070??");
+//      //#region Create Headers
         // TODO: make symbolic headers
         let featuresHeadersProperty = httpRequestFeatureType.GetProperty("Headers", instancePublicBindingFlags)
         let getFeaturesHeadersProperty = featuresHeadersProperty.GetMethod
@@ -896,9 +945,10 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Ldstr, "127.0.0.1:5000")
         ilGenerator.Emit(OpCodes.Newobj, stringValuesOpImplicit)
         ilGenerator.Emit(OpCodes.Callvirt, dictionaryAdd)
-
+        //#endregion
 
         // httpRequestFeatureLocal.Path = path;
+//      //#region Set Path, Method, Body
         ilGenerator.Emit(OpCodes.Ldloc, httpRequestFeatureLocal)
         let requestPathProperty = httpRequestFeatureType.GetProperty("Path", instancePublicBindingFlags)
         let requestPathSetMethod = requestPathProperty.SetMethod
@@ -918,7 +968,16 @@ module public Reflection =
         let requestBodySetMethod = requestBodyProperty.SetMethod
         ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
         ilGenerator.Emit(OpCodes.Callvirt, requestBodySetMethod)
+        //#endregion
 
+        // featureCollectionLocal.Set<IHttpRequestFeature>(httpRequestFeatureLocal);
+        // var httpResponseFeatureLocal = new HttpResponseFeature();
+        // memoryStreamLocal = new MemoryStream();
+        // httpResponseFeatureLocal.Body = memoryStreamLocal;
+        // httpResponseBodyFeatureLocal = new StreamResponseBodyFeature(memoryStreamLocal);
+        // featureCollectionLocal.Set<IHttpResponseFeature>(httpResponseFeatureLocal);
+        // featureCollectionLocal.Set<IHttpResponseBodyFeature>(httpResponseBodyFeatureLocal);
+//      //#region Set Request and Response Feature
         // featureCollectionLocal.Set<IHttpRequestFeature>(httpRequestFeatureLocal);
         let featuresSetGenericMethod = featureCollectionType.GetMethod("Set", instancePublicBindingFlags)
         assert featuresSetGenericMethod.IsGenericMethod
@@ -950,8 +1009,6 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Newobj, streamResponseBodyFeatureCtor)
         ilGenerator.Emit(OpCodes.Stloc, httpResponseBodyFeatureLocal)
 
-        // TODO: featureCollectionLocal.Set<IEndpointFeature>(endpoint);
-
         // featureCollectionLocal.Set<IHttpResponseFeature>(httpResponseFeatureLocal);
         let featuresSetMethod = featuresSetGenericMethod.MakeGenericMethod(iHttpResponseFeatureType)
         ilGenerator.Emit(OpCodes.Ldloc, featureCollectionLocal)
@@ -963,17 +1020,22 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Ldloc, featureCollectionLocal)
         ilGenerator.Emit(OpCodes.Ldloc, httpResponseBodyFeatureLocal)
         ilGenerator.Emit(OpCodes.Callvirt, featuresSetMethod)
+        //#endregion
+        // TODO: featureCollectionLocal.Set<IEndpointFeature>(endpoint);
 
         // defaultContextLocal = iHttpContextFactory.Create(featureCollectionLocal);
+//      //#region Create Default Http Context
         let createMethod = iHttpContextFactoryType.GetMethod("Create", instancePublicBindingFlags)
         assert(createMethod <> null)
         ilGenerator.Emit(OpCodes.Ldarg_1)
         ilGenerator.Emit(OpCodes.Ldloc, featureCollectionLocal)
         ilGenerator.Emit(OpCodes.Callvirt, createMethod)
         ilGenerator.Emit(OpCodes.Stloc, contextLocal)
+        //#endregion
 
         // app.Invoke(defaultContextLocal).Wait();
         // Calling 'Invoke' method
+        //#region Invoke, Wait, Return
         let invokeMethod = requestDelegateType.GetMethod("Invoke", instanceBindingFlags)
         assert(invokeMethod <> null)
         ilGenerator.Emit(OpCodes.Ldarg_0)
@@ -998,6 +1060,7 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Callvirt, getBodyMethod)
         ilGenerator.Emit(OpCodes.Call, tupleCreateIntStreamMethod)
         ilGenerator.Emit(OpCodes.Ret)
+        //#endregion
 
         let t = typeBuilder.CreateType()
         t.GetMethod(methodName, staticBindingFlags)

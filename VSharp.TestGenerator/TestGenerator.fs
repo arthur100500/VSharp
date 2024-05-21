@@ -227,11 +227,13 @@ module TestGenerator =
                             match heapAddress, value.term with
                             | {term = ConcreteHeapAddress(cha')}, Constant ({v=name}, _, _) when name.Contains "JsonByte(" && cha' = cha ->
                                 // Special case for Json
+                                // Read all field of value from state / call term2obj
                                 let options = JsonGetOptions value
-                                let value = value |> fun s -> JsonDeserialize s options |> model.Eval |> encode
-                                let options = options |> model.Eval |> encode
+                                let value = JsonDeserialize value options
+                                let encoded = value |> encode
+                                let options = options |> encode
                                 test.RefreshMemoryGraph()
-                                let value = value |> test.MemoryGraph.DecodeValue
+                                let value = encoded |> test.MemoryGraph.DecodeValue
                                 let options = options |> test.MemoryGraph.DecodeValue
                                 let optionsConverted = copyJsonOptions options
                                 let serialized = JsonSerializer.Serialize(value, options=optionsConverted)
@@ -311,6 +313,8 @@ module TestGenerator =
                 let index = (obj :?> referenceRepr).index
                 test.MemoryGraph.RepresentPtr index sightType offset
             else test.MemoryGraph.RepresentDetachedPtr sightType offset
+        // TODO: Do for Constant(___)
+        // make similar adress2obj
         | {term = HeapRef({term = ConcreteHeapAddress(addr)}, _)} ->
             address2obj info addr
         | CombinedTerm(terms, t) ->

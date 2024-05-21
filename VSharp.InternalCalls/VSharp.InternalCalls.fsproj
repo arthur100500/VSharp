@@ -78,6 +78,8 @@
         <Compile Include="AspNet.fs" />
         <Compile Include="Json.fsi" />
         <Compile Include="Json.fs" />
+        <Compile Include="ModelBinders.fsi" />
+        <Compile Include="ModelBinders.fs" />
     </ItemGroup>
 
     <ItemGroup>

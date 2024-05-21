@@ -10,3 +10,6 @@ module internal Object =
 
     [<Implements("System.Object System.Object.MemberwiseClone(this)")>]
     val MemberwiseClone : IInterpreter -> cilState -> term list -> cilState list
+
+    // For use in other utils
+    val DeepCopy : cilState -> term -> cilState list

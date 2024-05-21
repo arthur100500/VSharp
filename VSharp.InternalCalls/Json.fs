@@ -62,6 +62,14 @@ module Json =
             let valueTaskStruct = MakeStruct false (resultElseDefault taskResult) taskFromResultMethod.ReturnType
             valueTaskStruct
 
+        let returnTask typesMatched isValueType (cilState : cilState) =
+            let taskResult = cilState.Pop()
+            cilState.StatedConditionalExecutionCIL
+                (fun state k -> k (if typesMatched then True(), state else False(), state))
+                (fun cilState k -> cilState.Push (returnCorrectValueTask isValueType taskResult); k [cilState])
+                (interpreter.Raise interpreter.ArgumentException) // TODO: Maybe properly do JsonException?
+                id
+
         match stream, TryTermToFullyConcreteObj cilState.state typ with
         | {term = HeapRef _; hc = _}, Some concreteTyp ->
             let isValueType = (concreteTyp :?> Type).IsValueType
@@ -70,11 +78,8 @@ module Json =
             let firstElement = Memory.ReadArrayIndex cilState.state buffer [MakeNumber 0] None
             let taskResult = API.Terms.JsonDeserialize firstElement options
             let typesMatched = concreteTyp = TypeOf taskResult // TODO: More elaborate matching of type (it's json, not strict)
-            cilState.StatedConditionalExecutionCIL
-                (fun state k -> k (if typesMatched then True(), state else False(), state))
-                (fun cilState k -> cilState.Push (returnCorrectValueTask isValueType taskResult); k [cilState])
-                (interpreter.Raise interpreter.ArgumentException) // TODO: Maybe properly do JsonException?
-                id
+            let copiedStates = Object.DeepCopy cilState taskResult
+            List.collect (returnTask typesMatched isValueType) copiedStates
 
         | _, Some _ ->
             internalfail "Stream was not a HeapRef"
