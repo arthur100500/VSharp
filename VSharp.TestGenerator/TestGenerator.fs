@@ -51,8 +51,9 @@ type testGeneratorInfo = {
 
 module TestGenerator =
 
-    let mutable private maxBufferSize = 2048
-    let public setMaxBufferSize size = maxBufferSize <- size
+    let mutable private maxSymbolicBufferSize = 128
+    let mutable private maxConcreteBufferSize = 260
+    let public setMaxBufferSize size = maxSymbolicBufferSize <- size
 
     let private addMockToMemoryGraph (indices : Dictionary<concreteHeapAddress, int>) encodeMock evalField (test : ATest) addr (mock : ITypeMock) =
         let index = test.MemoryGraph.ReserveRepresentation()
@@ -106,8 +107,10 @@ module TestGenerator =
                         | SymbolicDimension -> __notImplemented__()
                     let length = Array.reduce (*) lengths
                     // TODO: normalize model (for example, try to minimize lengths of generated arrays)
-                    if maxBufferSize > 0 && length > maxBufferSize then
-                        raise <| InsufficientInformationException "Test generation for too large buffers disabled for now"
+                    if maxSymbolicBufferSize > 0 && VectorTime.less addr VectorTime.zero && length > maxSymbolicBufferSize then
+                        raise <| InsufficientInformationException "Test generation for too large symbolic buffers disabled for now"
+                    if maxConcreteBufferSize > 0 && VectorTime.greater addr VectorTime.zero && length > maxConcreteBufferSize then
+                        raise <| InsufficientInformationException "Test generation for too large concrete buffers disabled for now"
                     let repr = encodeArr test arrayType addr typ lengths lowerBounds index
                     repr :> obj
                 | _ when typ.IsValueType ->
@@ -515,7 +518,7 @@ module TestGenerator =
             | 4 ->
                 test.RefreshMemoryGraph()
                 test.RequestBody <- test.MemoryGraph.DecodeValue concreteValue |> jsonSerialize
-            | _ -> failwith "TODO"
+            | _ -> () // TODO: TODO
 
         // TODO: Set assembly path
         // TODO: Set deps.json path

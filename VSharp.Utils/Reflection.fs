@@ -763,7 +763,7 @@ module public Reflection =
         //#endregion
 
         let containsAttribute name (parameter : ParameterInfo) =
-            parameter.CustomAttributes |> Seq.tryFind (fun attrib -> attrib.AttributeType.Name = $"Microsoft.AspNetCore.Mvc.{name}Attribute") |> Option.isSome
+            parameter.CustomAttributes |> Seq.tryFind (fun attrib -> attrib.AttributeType.FullName = $"Microsoft.AspNetCore.Mvc.{name}Attribute") |> Option.isSome
 
         // Position counting initial args
         let inline positionOfPI (pi : ParameterInfo) = pi.Position + 4
@@ -781,22 +781,10 @@ module public Reflection =
 
         // Split controller arguments
         let bodyArgOption = Array.tryFind (containsAttribute "FromBody") parameters
-        let headerArgs = Array.filter (containsAttribute "FromHeader") parameters
-        let queryArgs = Array.filter (containsAttribute "FromQuery") parameters
         let formArgs = Array.filter (containsAttribute "FromForm") parameters
-        let routeArgs = Array.filter (containsAttribute "FromRoute") parameters
 
         // Leave only simple type args like string int etc
         let inline isSimple (t : Type) = t.IsPrimitive  || t.Equals(typeof<string>)
-        let inline isSimplePI (pi : ParameterInfo) = isSimple pi.ParameterType
-        let headerSimpleArgs = Array.filter isSimplePI headerArgs
-        let querySimpleArgs = Array.filter isSimplePI queryArgs
-        let formSimpleArgs = Array.filter isSimplePI formArgs
-        let routeSimpleArgs = Array.filter isSimplePI routeArgs
-
-        // Simple types go straight to dictionaries
-        // Complex types don't go anywhere
-        // TODO: In future translate access to header keys as access to values in an object
 
         // All arguments treated equally
         let controllerArguments : Type array = Array.map (fun (t : ParameterInfo) -> t.ParameterType) parameters
@@ -928,7 +916,8 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Ldloc, httpRequestFeatureLocal)
         ilGenerator.Emit(OpCodes.Callvirt, getFeaturesHeadersProperty)
         ilGenerator.Emit(OpCodes.Ldstr, "Content-Type")
-        ilGenerator.Emit(OpCodes.Ldstr, "application/json")
+        if formArgs.Length > 0 then ilGenerator.Emit(OpCodes.Ldstr, "multipart/form-data") // TODO: Add bound
+        else ilGenerator.Emit(OpCodes.Ldstr, "application/json")
         ilGenerator.Emit(OpCodes.Newobj, stringValuesOpImplicit)
         ilGenerator.Emit(OpCodes.Callvirt, dictionaryAdd)
 

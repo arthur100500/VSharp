@@ -1,6 +1,7 @@
 namespace VSharp.Interpreter.IL
 
 open System.IO
+open System.Reflection
 open VSharp
 open System.Text
 open System.Collections.Generic
@@ -114,6 +115,7 @@ module CilState =
             /// </summary>
             internalId : uint
             webConfiguration : webConfiguration option
+            webExplorationArguments : Dictionary<ParameterInfo, term>
             internalStatistics : Dictionary<Method, System.Diagnostics.Stopwatch>
         }
 
@@ -139,6 +141,7 @@ module CilState =
                 entryMethod = Some m
                 internalId = getNextStateId()
                 webConfiguration = webConfiguration
+                webExplorationArguments = Dictionary<ParameterInfo, term>()
                 internalStatistics = Dictionary<Method, System.Diagnostics.Stopwatch>()
             }
 

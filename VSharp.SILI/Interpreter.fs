@@ -882,17 +882,22 @@ type ILInterpreter() as this =
         let iHttpContextFactory = args[5]
         let requestDelegateType = MostConcreteTypeOfRef state requestDelegate
         let iHttpContextFactoryType = MostConcreteTypeOfRef state iHttpContextFactory
-        let method =
-            Reflection.createAspNetStartMethod requestDelegateType iHttpContextFactoryType controllerParameters
-            |> Application.getMethod
-        cilState.entryMethod <- Some method
+        let startAspNetMethodInfo = Reflection.createAspNetStartMethod requestDelegateType iHttpContextFactoryType controllerParameters
+        let startAspNetMethod = startAspNetMethodInfo |> Application.getMethod
 
+        cilState.entryMethod <- Some startAspNetMethod
+
+        let nones n = List.init n (fun _ -> None)
         let pathArg = Memory.AllocateString "/api/post" state
         let methodArg = Memory.AllocateString "POST" state
-        let parameters = Some [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg; None]
-        Memory.InitFunctionFrame state method None parameters
-        state.model <- Memory.EmptyModel method
-        Instruction(0<offsets>, method) |> cilState.PushToIp
+        let parameters = [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg] @ nones controllerParameters.Length
+        Memory.InitFunctionFrame state startAspNetMethod None (Some parameters)
+
+        let controllerPropagatedParameters = startAspNetMethodInfo.GetParameters() |> Array.skip 4
+        let webExplorationArguments = Array.mapi (fun i arg -> controllerParameters[i], Memory.ReadArgument state arg) controllerPropagatedParameters
+        for kvp in webExplorationArguments do cilState.webExplorationArguments.Add(fst kvp, snd kvp)
+        state.model <- Memory.EmptyModel startAspNetMethod
+        Instruction(0<offsets>, startAspNetMethod) |> cilState.PushToIp
         List.singleton cilState
 
     member private x.ConfigureAspNet (cilState : cilState) thisOption =

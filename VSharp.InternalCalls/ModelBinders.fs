@@ -6,4 +6,5 @@ open VSharp.Interpreter.IL.CilState
 
 module ModelBinders =
     let complexObjectModelBinderBind (interpreter: IInterpreter) (cilState : cilState) (args : term list) : cilState list =
+        let concreteArgs = List.map (TryTermToObj cilState.state) args
         failwith "TODO"
