@@ -13,10 +13,10 @@ module ModelBinders =
         Instruction(0<offsets>, invokeMethod) |> cilState.PushToIp
         List.singleton cilState
 
-    let complexObjectModelBinderBind (_: IInterpreter) (cilState : cilState) (args : term list) (method : Method) : cilState list =
+    let parameterBinderBindModelAsync (_: IInterpreter) (cilState : cilState) (args : term list) (method : Method) : cilState list =
         let concreteArgs = List.map (TryTermToObj cilState.state) args
         let modelBindingResultType = method.ReturnType.GenericTypeArguments[0]
-        let successMethod = modelBindingResultType.GetMethods() |> Array.find (fun x -> x.Name = "Success")
+        let bindingModelResultConstructor = modelBindingResultType.GetConstructor(enum<BindingFlags>(-1), [| typeof<obj>; typeof<bool> |])
         let controllerParameterDescriptor = concreteArgs[4].Value.GetType()
         let parameterInfoField = controllerParameterDescriptor |> Reflection.fieldsOf false |> Array.find (fun (x, y : FieldInfo) -> y.Name.Contains("ParameterInfo"))
         let parameterInfo = Memory.ReadField cilState.state args[4] (fst parameterInfoField)
@@ -24,4 +24,19 @@ module ModelBinders =
         let parameterPosition = Memory.ReadField cilState.state parameterInfo (fst parameterInfoField)
         let argumentPosition = parameterPosition |> TryTermToObj cilState.state |> Option.get :?> int
         let argument = cilState.webExplorationArguments |> Seq.find (fun x -> x.Key.Position = argumentPosition) |> (fun x -> x.Value)
-        miniCallInvoke successMethod [(Some (NullRef modelBindingResultType)); Some argument] cilState
+        let resultObject = bindingModelResultConstructor.Invoke([|null; true|])
+        let resultTerm = Memory.ObjectToTerm cilState.state resultObject modelBindingResultType
+        let modelBindingResultModelField = modelBindingResultType |> Reflection.fieldsOf false |>  Array.find (fun (x, y : FieldInfo) -> y.Name = "<Model>k__BackingField") |> fst
+        let returnResultInValueTask (cilState : cilState) =
+            let argument = cilState.Pop()
+            let resultTerm = Memory.WriteStructField resultTerm modelBindingResultModelField argument
+            let task = Json.valueTaskOfResult cilState false resultTerm modelBindingResultType
+            cilState.Push task
+            cilState
+        if (TypeOf argument).IsValueType then
+            let task = Json.valueTaskOfResult cilState false resultTerm modelBindingResultType
+            cilState.Push task
+            [cilState]
+        else
+            let statesWithCopiedArgument = Object.DeepCopy cilState argument
+            statesWithCopiedArgument |> List.map returnResultInValueTask

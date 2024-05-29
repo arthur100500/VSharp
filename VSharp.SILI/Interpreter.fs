@@ -890,7 +890,7 @@ type ILInterpreter() as this =
         cilState.entryMethod <- Some startAspNetMethod
 
         let nones n = List.init n (fun _ -> None)
-        let pathArg = Memory.AllocateString "/api/post" state
+        let pathArg = Memory.AllocateString "/api/post2/32/41" state
         let methodArg = Memory.AllocateString "POST" state
         let parameters = [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg; None] @ nones controllerParameters.Length
         Memory.InitFunctionFrame state startAspNetMethod None (Some parameters)

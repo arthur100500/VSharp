@@ -9,6 +9,21 @@ open VSharp.Interpreter.IL
 open VSharp.Interpreter.IL.CilState
 
 module Json =
+    let resultElseDefault taskResult (fieldInfo : FieldInfo) _ fieldType =
+        match fieldInfo.Name with
+        | "_result" -> taskResult
+        | _ -> Memory.DefaultOf fieldType
+
+    let valueTaskOfResult (cilState : cilState) boxObject taskResult resultType =
+        let taskType = typeof<ValueTask>
+        let taskFromResultMethod =
+            taskType.GetMethods()
+            |> Array.find (fun x -> x.Name = "FromResult")
+            |> fun x -> x.MakeGenericMethod([|resultType|])
+        let taskResult = if boxObject then Memory.BoxValueType cilState.state taskResult else taskResult
+        let valueTaskStruct = MakeStruct false (resultElseDefault taskResult) taskFromResultMethod.ReturnType
+        valueTaskStruct
+
     let getStreamBufferField state stream =
         let memoryStreamType = MostConcreteTypeOfRef state stream
         let memoryStreamBufferField =
@@ -47,26 +62,11 @@ module Json =
         assert (List.length args = 4)
         let stream, typ, options = args[0], args[1], args[3]
 
-        let resultElseDefault taskResult (fieldInfo : FieldInfo) fieldId fieldType =
-            match fieldInfo.Name with
-            | "_result" -> taskResult
-            | _ -> Memory.DefaultOf fieldType
-
-        let returnCorrectValueTask isValueType taskResult =
-            let taskType = typeof<ValueTask>
-            let taskFromResultMethod =
-                taskType.GetMethods()
-                |> Array.find (fun x -> x.Name = "FromResult")
-                |> fun x -> x.MakeGenericMethod(typeof<obj>)
-            let taskResult = if isValueType then Memory.BoxValueType cilState.state taskResult else taskResult
-            let valueTaskStruct = MakeStruct false (resultElseDefault taskResult) taskFromResultMethod.ReturnType
-            valueTaskStruct
-
         let returnTask typesMatched isValueType (cilState : cilState) =
             let taskResult = cilState.Pop()
             cilState.StatedConditionalExecutionCIL
                 (fun state k -> k (if typesMatched then True(), state else False(), state))
-                (fun cilState k -> cilState.Push (returnCorrectValueTask isValueType taskResult); k [cilState])
+                (fun cilState k -> cilState.Push (valueTaskOfResult cilState isValueType taskResult (typeof<obj>)); k [cilState])
                 (interpreter.Raise interpreter.ArgumentException) // TODO: Maybe properly do JsonException?
                 id
 

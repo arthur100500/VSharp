@@ -624,7 +624,6 @@ module API =
             let paramValues =
                 match paramValues with
                 | Some values ->
-                    if (List.length values = paramCount |> not) then printfn "debug"
                     assert(List.length values = paramCount)
                     values
                 | None -> List.replicate paramCount None

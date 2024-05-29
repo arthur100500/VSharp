@@ -518,7 +518,11 @@ module TestGenerator =
             | 4 ->
                 test.RefreshMemoryGraph()
                 test.RequestBody <- test.MemoryGraph.DecodeValue concreteValue |> jsonSerialize
-            | _ -> () // TODO: TODO
+            | _ ->
+                // TODO: Make more not debug
+                test.RefreshMemoryGraph()
+                let debugView = test.MemoryGraph.DecodeValue concreteValue
+                ()
 
         // TODO: Set assembly path
         // TODO: Set deps.json path

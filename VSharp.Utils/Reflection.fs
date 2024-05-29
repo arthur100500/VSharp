@@ -881,11 +881,11 @@ module public Reflection =
             ilGenerator.Emit(OpCodes.Call, serializeMethod)
             ilGenerator.Emit(OpCodes.Callvirt, taskWaitMethod)
         | _ ->
+            // Just write a symbolic body byte for request to pass through all middleware
             let memoryStreamWriteByteMethod = memoryStreamType.GetMethod("WriteByte", [| typeof<byte> |])
             ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
             ilGenerator.Emit(OpCodes.Ldarg, 4)
             ilGenerator.Emit(OpCodes.Callvirt, memoryStreamWriteByteMethod)
-            // Just write a symbolic body byte for request to pass through all middleware
             // We need to load dummy data into form payload
             // let streamWriterCtor = streamWriterType.GetConstructor([|typeof<Stream>|])
             // let streamWriterWriteMethod = streamWriterType.GetMethod("Write", [|typeof<string>|])

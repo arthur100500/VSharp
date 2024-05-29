@@ -451,6 +451,9 @@ module Loader =
 
             // Activator
             "T System.Activator.CreateInstance()"
+            "System.Object System.Activator.CreateInstance(System.Type)"
+            "System.Object System.Activator.CreateInstance(System.Type, System.Boolean)"
+            "System.Object System.Activator.CreateInstance(System.Type, System.Boolean, System.Boolean)"
             "System.Object System.Activator.CreateInstance(System.Type, System.Object[])"
 
             // Guid
