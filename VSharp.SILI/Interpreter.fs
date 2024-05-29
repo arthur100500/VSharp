@@ -549,6 +549,8 @@ type ILInterpreter() as this =
         let neededParams = methodInfo.GetParameters() |> Array.map (fun p -> p.ParameterType)
         let parameters : obj[] =
             match neededParams with
+            | [| t1; t2; t3; t4 |] when t1 = typeof<IInterpreter> && t2 = typeof<cilState> && t3 = typeof<term list> && t4 = typeof<Method>->
+                [| x :> IInterpreter; cilState; argsAndThis; originMethod |]
             | [| t1; t2; t3 |] when t1 = typeof<IInterpreter> && t2 = typeof<cilState> && t3 = typeof<term list> ->
                 [| x :> IInterpreter; cilState; argsAndThis |]
             | [| t1; t2 |] when t1 = typeof<state> && t2 = typeof<term list> ->
@@ -890,10 +892,10 @@ type ILInterpreter() as this =
         let nones n = List.init n (fun _ -> None)
         let pathArg = Memory.AllocateString "/api/post" state
         let methodArg = Memory.AllocateString "POST" state
-        let parameters = [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg] @ nones controllerParameters.Length
+        let parameters = [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg; None] @ nones controllerParameters.Length
         Memory.InitFunctionFrame state startAspNetMethod None (Some parameters)
 
-        let controllerPropagatedParameters = startAspNetMethodInfo.GetParameters() |> Array.skip 4
+        let controllerPropagatedParameters = startAspNetMethodInfo.GetParameters() |> Array.skip 5
         let webExplorationArguments = Array.mapi (fun i arg -> controllerParameters[i], Memory.ReadArgument state arg) controllerPropagatedParameters
         for kvp in webExplorationArguments do cilState.webExplorationArguments.Add(fst kvp, snd kvp)
         state.model <- Memory.EmptyModel startAspNetMethod

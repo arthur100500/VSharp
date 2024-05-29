@@ -714,9 +714,9 @@ module Loader =
             // Task
             "System.Void System.Threading.Tasks.TaskCompletionSource`1[Microsoft.AspNetCore.Routing.Matching.Matcher].SetResult(this, Microsoft.AspNetCore.Routing.Matching.Matcher)"
             "System.Void System.Threading.Tasks.Task.RunSynchronously(this)"
+
             // TaskWaiter
             "System.Void System.Runtime.CompilerServices.TaskAwaiter.ValidateEnd(System.Threading.Tasks.Task)"
-            // TextWriter
             "System.Void System.IO.TextWriter..ctor(this, System.IFormatProvider)"
 
             // StreamWriter
@@ -737,9 +737,6 @@ module Loader =
 
             // Task
             "System.Void System.Threading.Tasks.TaskCompletionSource`1[Microsoft.AspNetCore.Routing.Matching.Matcher].SetResult(this, Microsoft.AspNetCore.Routing.Matching.Matcher)"
-
-            // TaskWaiter
-            "System.Void System.Runtime.CompilerServices.TaskAwaiter.ValidateEnd(System.Threading.Tasks.Task)"
 
             // ASP.NET Core
             // Configuration builder
@@ -863,24 +860,10 @@ module Loader =
             "System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Routing.Matching.Matcher] Microsoft.AspNetCore.Routing.EndpointRoutingMiddleware.InitializeAsync(this)"
             "System.Collections.Generic.IList`1[Microsoft.Extensions.Primitives.StringSegment] Microsoft.AspNetCore.HostFiltering.HostFilteringMiddleware.Configure(this)"
             "System.Threading.Tasks.Task Microsoft.AspNetCore.Routing.Matching.DataSourceDependentMatcher.MatchAsync(this, Microsoft.AspNetCore.Http.HttpContext)"
-            "System.Void Microsoft.AspNetCore.Authentication.AuthenticationMiddleware+<Invoke>d__6.MoveNext(this)"
             "System.Boolean Microsoft.AspNetCore.HostFiltering.HostFilteringMiddleware.CheckHost(this, Microsoft.AspNetCore.Http.HttpContext, System.Collections.Generic.IList`1[Microsoft.Extensions.Primitives.StringSegment])"
 
             // PropertyActivator
             "System.Object Microsoft.Extensions.Internal.PropertyActivator`1[TContext].Activate(this, System.Object, TContext)"
-
-            // TODO: Classify
-            "System.Void Microsoft.Extensions.Hosting.Internal.ConsoleLifetime.RegisterShutdownHandlers(this)"
-            "System.String System.RuntimeMethodHandle.GetName(System.IRuntimeMethodInfo)"
-            "System.Void System.Threading.CancellationTokenSource.Cancel(this, System.Boolean)"
-            "System.Void System.Threading.Tasks.Task.AddException(this, System.Object)"
-            "System.Void System.Threading.Tasks.Task.Finish(this, System.Boolean)"
-            "System.Boolean System.Threading.Tasks.Task.TrySetException(this, System.Object)"
-            "System.Void System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(System.Threading.Tasks.Task)"
-            "System.Void System.Runtime.InteropServices.SafeHandle.InternalRelease(this, System.Boolean)"
-            "System.Boolean System.Double.TryParse(System.String, System.Double&)"
-            "System.Boolean System.Single.TryParse(System.String, System.Single&)"
-            "System.String System.Exception.GetStackTrace(this)"
 
             // ASP.NET Core
             // Configuration builder
@@ -921,8 +904,12 @@ module Loader =
             "System.Boolean System.Threading.Tasks.Task.TrySetException(this, System.Object)"
             "System.Void System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(System.Threading.Tasks.Task)"
             "System.Void System.Runtime.InteropServices.SafeHandle.InternalRelease(this, System.Boolean)"
+            "System.Boolean System.Double.TryParse(System.String, System.Double&)"
+            "System.Boolean System.Single.TryParse(System.String, System.Single&)"
+            "System.String System.Exception.GetStackTrace(this)"
+            "System.Boolean System.Threading.Tasks.Task.TrySetException(this, System.Object)"
+            "System.Void System.Runtime.InteropServices.SafeHandle.InternalRelease(this, System.Boolean)"
             "System.Text.Json.JsonEncodedText System.Text.Json.JsonEncodedText.Encode(System.String, System.Text.Encodings.Web.JavaScriptEncoder)"
-            "System.Object System.Activator.CreateInstance(System.Type)"
             "Microsoft.Extensions.Internal.ObjectMethodExecutor Microsoft.Extensions.Internal.ObjectMethodExecutor.Create(System.Reflection.MethodInfo, System.Reflection.TypeInfo, System.Object[])"
         ]
 

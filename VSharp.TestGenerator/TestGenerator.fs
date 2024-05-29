@@ -52,7 +52,7 @@ type testGeneratorInfo = {
 module TestGenerator =
 
     let mutable private maxSymbolicBufferSize = 128
-    let mutable private maxConcreteBufferSize = 260
+    let mutable private maxConcreteBufferSize = 2600
     let public setMaxBufferSize size = maxSymbolicBufferSize <- size
 
     let private addMockToMemoryGraph (indices : Dictionary<concreteHeapAddress, int>) encodeMock evalField (test : ATest) addr (mock : ITypeMock) =
@@ -559,7 +559,7 @@ module TestGenerator =
             let encodedBuffer = term2obj info buffer
             test.RefreshMemoryGraph()
             let bufferContents = test.MemoryGraph.DecodeValue encodedBuffer :?> byte array
-            let bufferStringContents = System.Text.Encoding.UTF8.GetString(bufferContents)
+            let bufferStringContents = System.Text.Encoding.UTF8.GetString(bufferContents).Trim('\u0000');
             test.ResponseBody <- bufferStringContents
             let responseStatusCodeField = Reflection.fieldsOf false responseType |> Array.find (fun (_, fi) -> fi.Name = "m_Item1") |> fst
             let responseStatusCode = Memory.ReadField info.state response responseStatusCodeField

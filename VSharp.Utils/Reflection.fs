@@ -2,6 +2,7 @@ namespace VSharp
 
 open System
 open System.Collections.Generic
+open System.IO
 open System.Reflection
 open System.Reflection.Emit
 open System.Reflection.Metadata
@@ -755,6 +756,7 @@ module public Reflection =
             extensionsPrimitiveAssemblyTypes |> Array.find (fun t -> t.Name = "StringValues")
         let memoryStreamType = typeof<System.IO.MemoryStream>
         let streamType = typeof<System.IO.Stream>
+        let streamWriterType = typeof<StreamWriter>
 
         let typeName = $"AspNetStart{Guid.NewGuid()}"
         let typeBuilder = dynamicModule.Value.DefineType(typeName, typeAttributes.Value)
@@ -766,7 +768,7 @@ module public Reflection =
             parameter.CustomAttributes |> Seq.tryFind (fun attrib -> attrib.AttributeType.FullName = $"Microsoft.AspNetCore.Mvc.{name}Attribute") |> Option.isSome
 
         // Position counting initial args
-        let inline positionOfPI (pi : ParameterInfo) = pi.Position + 4
+        let inline positionOfPI (pi : ParameterInfo) = pi.Position + 5
 
         // Gets name from custom attributes
         let inline getOverridingName (attributes : CustomAttributeData seq) =
@@ -799,6 +801,8 @@ module public Reflection =
             typeof<string>
             // Method
             typeof<string>
+            // Dummy data symbolic string
+            typeof<byte>
         |]
 
         let parameterTypes = Array.concat [parameterTypes; controllerArguments]
@@ -826,6 +830,7 @@ module public Reflection =
         let httpRequestFeatureLocal = ilGenerator.DeclareLocal(httpRequestFeatureType)
         let httpResponseFeatureLocal = ilGenerator.DeclareLocal(httpResponseFeatureType)
         let httpResponseBodyFeatureLocal = ilGenerator.DeclareLocal(streamResponseBodyFeatureType)
+        let streamWriterLocal = ilGenerator.DeclareLocal(streamWriterType)
         let contextLocal = ilGenerator.DeclareLocal(httpContextType)
 
         // Runs serialization if body arguments if body is not None
@@ -868,22 +873,47 @@ module public Reflection =
 
             // JsonSerializer.Serialize(memoryStreamLocal, arg4)
             ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
-            ilGenerator.Emit(OpCodes.Ldarg, 4)
+            ilGenerator.Emit(OpCodes.Ldarg, 5 + bodyArg.Position)
             ilGenerator.Emit(OpCodes.Ldnull)
             ilGenerator.Emit(OpCodes.Ldloca_S, cancellationTokenLocal)
             ilGenerator.Emit(OpCodes.Initobj, cancellationTokenType)
             ilGenerator.Emit(OpCodes.Ldloc, cancellationTokenLocal)
             ilGenerator.Emit(OpCodes.Call, serializeMethod)
             ilGenerator.Emit(OpCodes.Callvirt, taskWaitMethod)
-
-            // memoryStreamLocal.Position = 0;
+        | _ ->
+            let memoryStreamWriteByteMethod = memoryStreamType.GetMethod("WriteByte", [| typeof<byte> |])
             ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
-            ilGenerator.Emit(OpCodes.Ldc_I4_0)
-            ilGenerator.Emit(OpCodes.Conv_I8)
-            let streamPositionProperty = memoryStreamType.GetProperty("Position", instancePublicBindingFlags)
-            let streamPositionSetMethod = streamPositionProperty.SetMethod
-            ilGenerator.Emit(OpCodes.Callvirt, streamPositionSetMethod)
-        | None -> ()
+            ilGenerator.Emit(OpCodes.Ldarg, 4)
+            ilGenerator.Emit(OpCodes.Callvirt, memoryStreamWriteByteMethod)
+            // Just write a symbolic body byte for request to pass through all middleware
+            // We need to load dummy data into form payload
+            // let streamWriterCtor = streamWriterType.GetConstructor([|typeof<Stream>|])
+            // let streamWriterWriteMethod = streamWriterType.GetMethod("Write", [|typeof<string>|])
+            // let streamWriterFlushMethod = streamWriterType.GetMethod("Flush", [||])
+            //
+            // let streamWriterDisposeMethod = streamWriterType.GetMethod("Dispose", [||])
+            // // streamWriterLocal = new StreamWriter(memoryStreamLocal);
+            // ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
+            // ilGenerator.Emit(OpCodes.Newobj, streamWriterCtor)
+            // ilGenerator.Emit(OpCodes.Stloc, streamWriterLocal)
+            // // streamWriter.Write("dummy data string");
+            // ilGenerator.Emit(OpCodes.Ldloc, streamWriterLocal)
+            // ilGenerator.Emit(OpCodes.Ldloc, 4)
+            // ilGenerator.Emit(OpCodes.Callvirt, streamWriterWriteMethod)
+            // // streamWriter.Flush();
+            // ilGenerator.Emit(OpCodes.Ldloc, streamWriterLocal)
+            // ilGenerator.Emit(OpCodes.Callvirt, streamWriterFlushMethod)
+            // // TODO: streamWriter.Dispose()
+            // // ilGenerator.Emit(OpCodes.Ldloc, streamWriterLocal)
+            // // ilGenerator.Emit(OpCodes.Callvirt, streamWriterDisposeMethod)
+
+        // memoryStreamLocal.Position = 0;
+        ilGenerator.Emit(OpCodes.Ldloc, memoryStreamLocal)
+        ilGenerator.Emit(OpCodes.Ldc_I4_0)
+        ilGenerator.Emit(OpCodes.Conv_I8)
+        let streamPositionProperty = memoryStreamType.GetProperty("Position", instancePublicBindingFlags)
+        let streamPositionSetMethod = streamPositionProperty.SetMethod
+        ilGenerator.Emit(OpCodes.Callvirt, streamPositionSetMethod)
         //#endregion
 
         // var featureCollectionLocal = new FeatureCollection();
@@ -916,7 +946,7 @@ module public Reflection =
         ilGenerator.Emit(OpCodes.Ldloc, httpRequestFeatureLocal)
         ilGenerator.Emit(OpCodes.Callvirt, getFeaturesHeadersProperty)
         ilGenerator.Emit(OpCodes.Ldstr, "Content-Type")
-        if formArgs.Length > 0 then ilGenerator.Emit(OpCodes.Ldstr, "multipart/form-data") // TODO: Add bound
+        if formArgs.Length > 0 then ilGenerator.Emit(OpCodes.Ldstr, "multipart/form-data; boundary=1") // TODO: Add bound
         else ilGenerator.Emit(OpCodes.Ldstr, "application/json")
         ilGenerator.Emit(OpCodes.Newobj, stringValuesOpImplicit)
         ilGenerator.Emit(OpCodes.Callvirt, dictionaryAdd)
