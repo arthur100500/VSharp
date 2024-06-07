@@ -6,6 +6,7 @@ open System.Collections.Concurrent
 open System.IO
 open System.Text
 open System.Collections.Generic
+open System.Linq
 
 open System.Threading
 open System.Timers
@@ -57,7 +58,7 @@ type generatedTestInfo =
 *)
 type public SVMStatistics(entryMethods : Method seq, generalizeGenericsCoverage : bool) =
 
-    let entryMethods = List<Method>(entryMethods)
+    let mutable entryMethods = List<Method>(entryMethods)
 
     let totalVisited = Dictionary<codeLocation, uint>()
     let visitedWithHistory = Dictionary<codeLocation, HashSet<codeLocation>>()
@@ -275,6 +276,11 @@ type public SVMStatistics(entryMethods : Method seq, generalizeGenericsCoverage 
     member x.TrackFinished (s : cilState, isError) =
         testsCount <- testsCount + 1u
         x.SetBasicBlocksAsCoveredByTest s.history |> ignore
+        if s.WebExploration then
+            for m in s.history do
+                if (m.method.Module.Assembly = entryMethods[0].Module.Assembly) then
+                    entryMethods.Add(m.method)
+            entryMethods <- entryMethods.Where(fun x -> not x.IsEntryPoint).Distinct().ToList()
         let generatedTestInfo =
             {
                 isError = isError

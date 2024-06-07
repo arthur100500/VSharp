@@ -34,6 +34,8 @@ module ModelBinders =
             cilState.Push task
             cilState
         if (TypeOf argument).IsValueType then
+            let argument = Memory.BoxValueType cilState.state argument
+            let resultTerm = Memory.WriteStructField resultTerm modelBindingResultModelField argument
             let task = Json.valueTaskOfResult cilState false resultTerm modelBindingResultType
             cilState.Push task
             [cilState]

@@ -770,17 +770,6 @@ module public Reflection =
         // Position counting initial args
         let inline positionOfPI (pi : ParameterInfo) = pi.Position + 5
 
-        // Gets name from custom attributes
-        let inline getOverridingName (attributes : CustomAttributeData seq) =
-            let modelNameProvider = "IModelNameProvider"
-            let fetchName (source : CustomAttributeData) =
-                let nameArgument = source.NamedArguments |> Seq.tryFind (fun x -> x.MemberName = "Name")
-                nameArgument.Value.TypedValue.ToString()
-            let containsModelNameProvider interfaces =
-                Seq.tryFind (fun (i : Type) -> i.Name = modelNameProvider) interfaces |> Option.isSome
-            let renames = attributes |> Seq.filter (fun a -> a.AttributeType.GetInterfaces() |> containsModelNameProvider)
-            Seq.tryLast renames |> Option.map fetchName
-
         // Split controller arguments
         let bodyArgOption = Array.tryFind (containsAttribute "FromBody") parameters
         let formArgs = Array.filter (containsAttribute "FromForm") parameters

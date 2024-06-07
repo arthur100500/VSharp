@@ -23,6 +23,8 @@ type webTestInfo = {
     sourceProjectPath : string
     requestPath : string
     requestMethod : string
+    requestHeaders: string // TODO: Replace with dictionary
+    requestQuery: string // TODO: Replace with dictionary
     requestBody: string
     responseBody: string
     responseStatusCode: int32
@@ -45,6 +47,8 @@ with
         requestMethod = null
         requestBody = null
         responseBody = null
+        requestHeaders = null
+        requestQuery = null
         responseStatusCode = 0
     }
 
@@ -72,6 +76,12 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
     member x.RequestPath
         with get() = info.requestPath
         and set (value : string) = setViaReflection info "requestPath" value
+    member x.RequestQuery
+        with get() = info.requestQuery
+        and set (value : string) = setViaReflection info "requestQuery" value
+    member x.RequestHeaders
+        with get() = info.requestHeaders
+        and set (value : string) = setViaReflection info "requestHeaders" value
     member x.RequestMethod
         with get() = info.requestMethod
         and set (value : string) = setViaReflection info "requestMethod" value

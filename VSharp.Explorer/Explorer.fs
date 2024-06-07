@@ -157,7 +157,8 @@ type private SVMExplorer(explorationOptions: ExplorationOptions, statistics: SVM
                         Memory.ForcePopFrames (callStackSize - 2) state
                     else Memory.ForcePopFrames (callStackSize - 1) state
                 let generatedTest =
-                    if cilState.WebExploration then TestGenerator.state2webTest suite entryMethod state
+                    let argumentParameterInfos = cilState.webExplorationArguments.Keys |> Seq.toArray
+                    if cilState.WebExploration then TestGenerator.state2webTest argumentParameterInfos suite entryMethod state
                     else TestGenerator.state2test suite entryMethod state
                 match generatedTest with
                 | Some test ->

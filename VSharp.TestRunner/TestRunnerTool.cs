@@ -220,7 +220,6 @@ namespace VSharp.TestRunner
             var expectedBody = test.ResponseBody;
             var resultBody = result.Content.ReadAsStringAsync().Result;
 
-
             return expectedBody == resultBody;
         }
 

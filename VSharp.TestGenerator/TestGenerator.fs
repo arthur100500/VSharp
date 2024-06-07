@@ -5,7 +5,6 @@ open System.Collections.Generic
 open System.IO
 open System.Reflection
 open System.Text.Json
-open System.Xml.Serialization
 open VSharp
 open VSharp.Core
 open System.Linq
@@ -489,7 +488,7 @@ module TestGenerator =
         | StateModel modelState -> modelState2test info modelState
         | _ -> __unreachable__()
 
-    let model2webTest info =
+    let model2webTest aspNetParameters info =
         Logger.error "Starting to create test"
         let modelState =
             match info.state.model with
@@ -501,12 +500,6 @@ module TestGenerator =
             let buffer = bufferField.GetValue(obj) :?> byte array
             System.Text.Encoding.UTF8.GetString(buffer).Trim(null)
 
-        let ocamlCaseJsonOptions =
-            let options = JsonSerializerOptions()
-            options.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase
-            options
-
-        let jsonSerialize argument = JsonSerializer.Serialize(argument, options=ocamlCaseJsonOptions)
 
         let fillCorrespondingField (test : ATest) (parameterInfo: ParameterInfo) (concreteValue : obj) =
             let test = test :?> AspIntegrationTest
@@ -515,14 +508,12 @@ module TestGenerator =
             | 1 -> ()
             | 2 -> test.RequestPath <- test.MemoryGraph.DecodeString concreteValue
             | 3 -> test.RequestMethod <- test.MemoryGraph.DecodeString concreteValue
-            | 4 ->
+            | 4 -> ()
+            | n ->
                 test.RefreshMemoryGraph()
-                test.RequestBody <- test.MemoryGraph.DecodeValue concreteValue |> jsonSerialize
-            | _ ->
-                // TODO: Make more not debug
-                test.RefreshMemoryGraph()
-                let debugView = test.MemoryGraph.DecodeValue concreteValue
-                ()
+                let parameter : ParameterInfo = aspNetParameters |> Array.item (n - 5)
+                let object = test.MemoryGraph.DecodeValue concreteValue
+                IntegrationTestFiller.setRequestPartForParameter test parameter object
 
         // TODO: Set assembly path
         // TODO: Set deps.json path
@@ -590,7 +581,7 @@ module TestGenerator =
         }
         model2test info
 
-    let public state2webTest testSuite (m : Method) (state : state) : ATest option =
+    let public state2webTest aspNetParameters testSuite (m : Method) (state : state) : ATest option =
         let indices = Dictionary<concreteHeapAddress, int>()
         let mockCache = Dictionary<ITypeMock, Mocking.Type>()
         let test = AspIntegrationTest()
@@ -604,7 +595,7 @@ module TestGenerator =
             model=state.model
             mockCache=mockCache
         }
-        model2webTest info
+        model2webTest aspNetParameters info
 
 
     let public state2testWithMockingCache testSuite (m : Method) (state : state) mockCache =

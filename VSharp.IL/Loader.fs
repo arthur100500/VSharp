@@ -709,6 +709,7 @@ module Loader =
             // Encoder
             "System.Text.Encoder System.Text.UTF8Encoding.GetEncoder(this)"
             "System.Void System.IO.StreamWriter.Flush(this)"
+            "System.Threading.Tasks.ValueTask`1[System.IO.Pipelines.FlushResult] System.IO.Pipelines.StreamPipeWriter.FlushAsync(this, System.Threading.CancellationToken)"
             "System.Void System.Text.UTF8Encoding..ctor(this, System.Boolean)"
 
             // Encoding

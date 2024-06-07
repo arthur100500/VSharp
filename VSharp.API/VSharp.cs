@@ -489,7 +489,8 @@ namespace VSharp
 
             var methods = new List<MethodBase> { entryPoint };
 
-            var statistics = StartExploration(methods, coverageZone.MethodZone, options, configuration);
+            // TODO: Get coverageZone from argument
+            var statistics = StartExploration(methods, coverageZone.ModuleZone, options, configuration);
             if (options.RenderTests)
                 Render(statistics);
             return statistics;
