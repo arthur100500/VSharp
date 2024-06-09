@@ -78,7 +78,7 @@ module Json =
             let firstElement = Memory.ReadArrayIndex cilState.state buffer [MakeNumber 0] None
             let taskResult = API.Terms.JsonDeserialize firstElement options
             let typesMatched = concreteTyp = TypeOf taskResult // TODO: More elaborate matching of type (it's json, not strict)
-            let copiedStates = Object.DeepCopy cilState taskResult
+            let copiedStates = Object.DeepCopy cilState taskResult false
             List.collect (returnTask typesMatched isValueType) copiedStates
 
         | _, Some _ ->

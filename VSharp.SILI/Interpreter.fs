@@ -10,6 +10,7 @@ open CilState
 open VSharp
 open VSharp.CSharpUtils
 open VSharp.Core
+open VSharp.Core.API
 open VSharp.Interpreter.IL
 open IpOperations
 open MethodBody
@@ -860,22 +861,45 @@ type ILInterpreter() as this =
         | _ ->
             internalfail "Invoke must have 2 arguments"
 
-    member private x.StartAspNet (cilState : cilState) args =
-        Logger.trace "Starting exploration of ASP.NET application"
-        Console.Clear()
+    
+    member private x.CollectControllerActions (cilState : cilState) =
         // Get all controllers
         // TODO: Get assemblies the normal way, not .[0]
         let assemblies = AssemblyManager.GetAssemblies()
         let executionAssembly = assemblies |> Seq.head
-        let controllerMethods =
-            executionAssembly.GetTypes()
-            |> Seq.filter (fun t -> t.BaseType.Name = "ControllerBase")
-            |> Seq.map (fun x -> x.GetMethods())
-            |> Seq.concat
+        let controllers = executionAssembly.GetTypes() |> Seq.filter (fun t -> t.BaseType.Name = "ControllerBase")
+        let controllerMethods = controllers |> Seq.map (fun x -> x.GetMethods(BindingFlags.Instance + BindingFlags.Public)) |> Seq.concat
+        let controllerMethods = controllerMethods |> Seq.filter (fun (x : MethodInfo) -> x.DeclaringType.Assembly = executionAssembly)
+        controllerMethods
 
-        let researchedController = controllerMethods |> Seq.item 0
-        let controllerParameters = researchedController.GetParameters()
+    member private x.StartAspNet (cilState : cilState) args =
+        Logger.trace "Starting exploration of ASP.NET application"
+        Console.Clear()
+        let controllersActions = x.CollectControllerActions cilState
+        let cilStates = controllersActions |> Seq.map (x.StartControllerResearch cilState args)
+        cilStates |> Seq.toList
 
+    member private x.GenerateDummyPathArguments (arguments : ParameterInfo seq) =
+        let fromRouteArguments = arguments |> Seq.filter (fun a -> a.CustomAttributes |> Seq.tryFind (fun t -> t.AttributeType.Name = "FromRouteAttribute") |> Option.isSome)
+        let fromRouteArgumentsDefaults = fromRouteArguments |> Seq.map (fun _ -> "<dummy>")
+        Seq.fold (fun s e -> $"{s}/{e}") "" fromRouteArgumentsDefaults
+    
+    member private x.GenerateDummyControllerActionPath (researchedControllerAction : MethodInfo) =
+        // TODO: Better comply with https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/routing?view=aspnetcore-8.0
+        // Right now only [controller] Controller => [method/data1/data2] Method is supported
+        let findRoute = Seq.tryFind (fun (x : CustomAttributeData) -> x.AttributeType.Name = "RouteAttribute")
+        let getData (attribute : CustomAttributeData) = attribute.ConstructorArguments[0].Value.ToString()
+        let controller = researchedControllerAction.DeclaringType
+        let controllerRouteAttribute = controller.CustomAttributes |> findRoute |> Option.map getData
+        let controllerName = match controllerRouteAttribute with | Some x -> x | None -> controller.Name.Replace("Controller", "") // TODO: Replace only end if possible
+        let actionRouteAttribute = researchedControllerAction.CustomAttributes |> findRoute |> Option.map getData
+        let actionName = match actionRouteAttribute with | Some x -> x.Split("/")[0] | None -> researchedControllerAction.Name
+        let dummyPayload = x.GenerateDummyPathArguments <| researchedControllerAction.GetParameters()
+        $"/{controllerName}/{actionName}{dummyPayload}"
+    
+    member private x.StartControllerResearch (cilState : cilState) args (researchedControllerAction : MethodInfo) =
+        let controllerParameters = researchedControllerAction.GetParameters()
+        let cilState = cilState.Copy(Memory.CopyState cilState.state)
         cilState.ClearStack()
         let state = cilState.state
         state.complete <- false
@@ -886,21 +910,19 @@ type ILInterpreter() as this =
         let iHttpContextFactoryType = MostConcreteTypeOfRef state iHttpContextFactory
         let startAspNetMethodInfo = Reflection.createAspNetStartMethod requestDelegateType iHttpContextFactoryType controllerParameters
         let startAspNetMethod = startAspNetMethodInfo |> Application.getMethod
-
         cilState.entryMethod <- Some startAspNetMethod
-
         let nones n = List.init n (fun _ -> None)
-        let pathArg = Memory.AllocateString "/api/post2/0/0" state
-        let methodArg = Memory.AllocateString "POST" state
-        let parameters = [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg; None] @ nones controllerParameters.Length
+        let path = x.GenerateDummyControllerActionPath researchedControllerAction
+        let pathArg = Memory.AllocateString path state
+        let parameters = [Some requestDelegate; Some iHttpContextFactory; Some pathArg; None; None] @ nones controllerParameters.Length
         Memory.InitFunctionFrame state startAspNetMethod None (Some parameters)
-
         let controllerPropagatedParameters = startAspNetMethodInfo.GetParameters() |> Array.skip 5
         let webExplorationArguments = Array.mapi (fun i arg -> controllerParameters[i], Memory.ReadArgument state arg) controllerPropagatedParameters
+        cilState.webExplorationArguments <- Dictionary<ParameterInfo, term>()
         for kvp in webExplorationArguments do cilState.webExplorationArguments.Add(fst kvp, snd kvp)
         state.model <- Memory.EmptyModel startAspNetMethod
         Instruction(0<offsets>, startAspNetMethod) |> cilState.PushToIp
-        List.singleton cilState
+        cilState
 
     member private x.ConfigureAspNet (cilState : cilState) thisOption =
         let webAppOptions = Option.get thisOption

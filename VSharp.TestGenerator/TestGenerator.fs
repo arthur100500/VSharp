@@ -495,25 +495,19 @@ module TestGenerator =
             | StateModel modelState -> modelState
             | _ -> __unreachable__()
 
-        let retrieveMemoryStreamBuffer obj =
-            let bufferField = typeof<MemoryStream>.GetField("_buffer", BindingFlags.NonPublic + BindingFlags.Instance)
-            let buffer = bufferField.GetValue(obj) :?> byte array
-            System.Text.Encoding.UTF8.GetString(buffer).Trim(null)
-
-
         let fillCorrespondingField (test : ATest) (parameterInfo: ParameterInfo) (concreteValue : obj) =
             let test = test :?> AspIntegrationTest
             match parameterInfo.Position with
-            | 0 -> ()
-            | 1 -> ()
-            | 2 -> test.RequestPath <- test.MemoryGraph.DecodeString concreteValue
+            | 2 ->
+                test.RequestPath <- test.MemoryGraph.DecodeString concreteValue
+                IntegrationTestFiller.cropRequestPath test aspNetParameters
             | 3 -> test.RequestMethod <- test.MemoryGraph.DecodeString concreteValue
-            | 4 -> ()
-            | n ->
+            | n when n > 4 ->
                 test.RefreshMemoryGraph()
                 let parameter : ParameterInfo = aspNetParameters |> Array.item (n - 5)
                 let object = test.MemoryGraph.DecodeValue concreteValue
                 IntegrationTestFiller.setRequestPartForParameter test parameter object
+            | _ -> ()
 
         // TODO: Set assembly path
         // TODO: Set deps.json path

@@ -138,21 +138,16 @@ namespace VSharp.TestRunner
         {
             var test = (AspIntegrationTest)rawTest;
             // Should be stored in .vswt
-            var assemblyPath =
-                @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.dll";
-            var sourceProjectPath = @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi";
-            var depsPath =
-                @"C:\Users\arthur\RiderProjects\AspNetApps\CatPhotoApi\CatPhotoApi\CatPhotoApi\bin\Release\net7.0\win-x64\publish\CatPhotoApi.deps.json";
-            var requestPath = test.RequestPath;
-            var requestMethod = test.RequestMethod;
-            var requestBody = test.RequestBody;
+            var assemblyPath = @"C:\Users\arthu\Documents\AspNetApps\VSTestingProjects\SimpleProject\bin\Release\net7.0\win-x64\publish\SimpleProject.dll";
+            var sourceProjectPath = @"C:\Users\arthu\Documents\AspNetApps\VSTestingProjects\";
+            var depsPath = @"C:\Users\arthu\Documents\AspNetApps\VSTestingProjects\SimpleProject\bin\Release\net7.0\win-x64\publish\SimpleProject.deps.json";
 
             // Copy .deps file in order to create client
-            var catPhotoAssembly = Assembly.LoadFrom(assemblyPath);
-            var catPhotoDeps = File.ReadAllText(depsPath);
-            File.WriteAllText(Path.GetFileName(depsPath), catPhotoDeps);
+            var researchedAssembly = Assembly.LoadFrom(assemblyPath);
+            var researchedDeps = File.ReadAllText(depsPath);
+            File.WriteAllText(Path.GetFileName(depsPath), researchedDeps);
 
-            var typeFromAssembly = catPhotoAssembly.GetTypes().First(x => x.Name == "Program");
+            var typeFromAssembly = researchedAssembly.GetTypes().First(x => x.Name == "Program");
             var factoryType = typeof(WebApplicationFactory<>).MakeGenericType(typeFromAssembly);
             var factory = Activator.CreateInstance(factoryType);
 
@@ -171,16 +166,16 @@ namespace VSharp.TestRunner
 
             factory = withWebHostBuilderMethod!.Invoke(factory,
                 new object[] { (Action<IWebHostBuilder>)WebHostBuilder });
-
+            
             Environment.CurrentDirectory = sourceProjectPath;
-
+            
             // Write assembly under tests in MvcTestingAppManifest.json
-            const string manifestPath = "./MvcTestingAppManifest.json";
+                const string manifestPath = "./MvcTestingAppManifest.json";
             var mvcTestingManifestExists = File.Exists(manifestPath);
             if (!mvcTestingManifestExists) File.WriteAllText(manifestPath, "{ }");
             var mvcTestingManifestEntries =
                 JsonSerializer.Deserialize<IDictionary<string, string>>(File.ReadAllBytes(manifestPath))!;
-            mvcTestingManifestEntries.TryAdd(catPhotoAssembly.FullName!, sourceProjectPath);
+            mvcTestingManifestEntries.TryAdd(researchedAssembly.FullName!, sourceProjectPath);
             var indentedOption = new JsonSerializerOptions { WriteIndented = true };
             var mvcTestingManifestEntriesSerialized =
                 JsonSerializer.Serialize(mvcTestingManifestEntries, indentedOption);
@@ -190,9 +185,19 @@ namespace VSharp.TestRunner
             var createClientMethod = factoryType.GetMethods().First(x => x.Name.Contains("CreateClient"));
             var client = (HttpClient)createClientMethod.Invoke(factory, System.Array.Empty<object>())!;
 
-            var requestBodyText = JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(requestBodyText, Encoding.UTF8, "application/json");
-            var requestMethodTyped = requestMethod switch
+            HttpContent content = new StringContent("");
+            
+            if (test.RequestBody?.Length > 0)
+            {
+                content = new StringContent(test.RequestBody, Encoding.UTF8, "application/json");
+            }
+            else if (test.RequestForm.Count > 0)
+            {
+                var correctFormKvps = test.RequestForm.Select(f => new KeyValuePair<string, string>(f.key, f.value));
+                content = new FormUrlEncodedContent(correctFormKvps);
+            }
+            
+            var requestMethodTyped = test.RequestMethod switch
             {
                 "POST" => HttpMethod.Post,
                 "GET" => HttpMethod.Get,
@@ -201,8 +206,20 @@ namespace VSharp.TestRunner
                 _ => null
             };
 
-            var message = new HttpRequestMessage(requestMethodTyped!, requestPath);
+            if (test.RequestQuery.Count > 0)
+            {
+                var query = test.RequestQuery.Select(q => $"{q.key}={q.value}");
+                test.RequestPath += $"?{String.Join("&", query)}";
+            }
+            
+            var message = new HttpRequestMessage(requestMethodTyped!, test.RequestPath);
             message.Content = content;
+
+            foreach (var header in test.RequestHeaders)
+            {
+                message.Headers.Add(header.key, header.value);
+            }
+
             try { var response = client.SendAsync(message).Result; return response; }
             catch (Exception e) { throw new TargetInvocationException(e);}
         }

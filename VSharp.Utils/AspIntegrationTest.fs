@@ -11,20 +11,30 @@ open VSharp
 
 [<CLIMutable>]
 [<Serializable>]
+type kvpRepr = {
+    key: string
+    value: string
+}
+
+[<CLIMutable>]
+[<Serializable>]
 [<XmlInclude(typeof<structureRepr>)>]
 [<XmlInclude(typeof<arrayRepr>)>]
 [<XmlInclude(typeof<referenceRepr>)>]
 [<XmlInclude(typeof<pointerRepr>)>]
 [<XmlInclude(typeof<enumRepr>)>]
 [<XmlInclude(typeof<stringRepr>)>]
+[<XmlInclude(typeof<kvpRepr>)>]
 type webTestInfo = {
     common : commonTestInfo
     assemblyPath : string
     sourceProjectPath : string
     requestPath : string
     requestMethod : string
-    requestHeaders: string // TODO: Replace with dictionary
-    requestQuery: string // TODO: Replace with dictionary
+    requestHeaders: kvpRepr ResizeArray
+    requestQuery: kvpRepr ResizeArray
+    requestForm: kvpRepr ResizeArray
+    requestFormBoundary: string
     requestBody: string
     responseBody: string
     responseStatusCode: int32
@@ -47,8 +57,10 @@ with
         requestMethod = null
         requestBody = null
         responseBody = null
-        requestHeaders = null
-        requestQuery = null
+        requestHeaders = ResizeArray()
+        requestQuery = ResizeArray()
+        requestForm = ResizeArray()
+        requestFormBoundary = null
         responseStatusCode = 0
     }
 
@@ -76,12 +88,15 @@ type AspIntegrationTest private (info: webTestInfo, mockStorage: MockStorage, cr
     member x.RequestPath
         with get() = info.requestPath
         and set (value : string) = setViaReflection info "requestPath" value
+    member x.RequestFormBoundary
+        with get() = info.requestFormBoundary
+        and set (value : string) = setViaReflection info "requestFormBoundary" value
+    member x.RequestForm
+        with get() = info.requestForm
     member x.RequestQuery
         with get() = info.requestQuery
-        and set (value : string) = setViaReflection info "requestQuery" value
     member x.RequestHeaders
         with get() = info.requestHeaders
-        and set (value : string) = setViaReflection info "requestHeaders" value
     member x.RequestMethod
         with get() = info.requestMethod
         and set (value : string) = setViaReflection info "requestMethod" value

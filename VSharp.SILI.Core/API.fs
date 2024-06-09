@@ -371,6 +371,7 @@ module API =
     module public Memory =
         open Memory
 
+        let CopyState (state : state) = state.Copy state.pc
         let EmptyIsolatedState() = state.MakeEmpty false
         let EmptyCompleteState() = state.MakeEmpty true
 

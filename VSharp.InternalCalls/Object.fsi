@@ -12,4 +12,4 @@ module internal Object =
     val MemberwiseClone : IInterpreter -> cilState -> term list -> cilState list
 
     // For use in other utils
-    val DeepCopy : cilState -> term -> cilState list
+    val DeepCopy : cilState -> term -> bool -> cilState list

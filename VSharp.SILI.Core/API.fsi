@@ -388,6 +388,7 @@ module API =
         val TryTermToObject : state -> term -> obj option
 
         val StateResult : state -> term
+        val CopyState : state -> state
 
     module Print =
         val Dump : state -> string

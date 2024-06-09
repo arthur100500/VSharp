@@ -4,7 +4,6 @@ open System
 open System.Collections
 open System.Reflection
 open System.Text.Json
-open Mono.Cecil
 open VSharp
 
 module IntegrationTestFiller =
@@ -50,7 +49,7 @@ module IntegrationTestFiller =
         let fetchName (source: CustomAttributeData) =
             let nameArgument =
                 source.NamedArguments |> Seq.tryFind (fun x -> x.MemberName = "Name")
-            nameArgument |> Option.map _.TypedValue.ToString()
+            nameArgument |> Option.map _.TypedValue.Value.ToString()
         let containsModelNameProvider interfaces =
             Seq.tryFind (fun (i: Type) -> i.Name = modelNameProvider) interfaces
             |> Option.isSome
@@ -63,11 +62,11 @@ module IntegrationTestFiller =
         match sourceOfAttributes attributes with
         | Default ->
             // TODO: Think about auto-assigned sources of parameters in controllers
-            test.RequestQuery <- $"{test.RequestQuery}\n{name}: {converted}"
+            test.RequestQuery.Add {key=name; value=converted}
         | FromBody -> test.RequestBody <- converted
-        | FromForm -> test.RequestBody <- $"{test.RequestBody}\n{name}: {converted}"
-        | FromQuery -> test.RequestQuery <- $"{test.RequestQuery}\n{name}: {converted}"
-        | FromHeader -> test.RequestHeaders <- $"{test.RequestHeaders}\n{name}: {converted}"
+        | FromForm -> test.RequestForm.Add {key=name; value=converted}
+        | FromQuery -> test.RequestQuery.Add {key=name; value=converted}
+        | FromHeader -> test.RequestHeaders.Add {key=name; value=converted}
         | FromRoute -> test.RequestPath <- $"{test.RequestPath}/{converted}"
 
     let rec setRequestPartsComplexProperties (test: AspIntegrationTest) object name =
@@ -98,5 +97,28 @@ module IntegrationTestFiller =
         let parameterName = getOverridingName parameterInfo.CustomAttributes
         let parameterName = match parameterName with Some x -> x | None -> parameterInfo.Name
         setRequestPartInner test parameterInfo.CustomAttributes object parameterName
-
-
+    
+    let cropRequestPath (test: AspIntegrationTest) (parameters: ParameterInfo array) =
+        let requestPathSplit = test.RequestPath.Split("/")
+        let pathParametersLen = parameters |> Array.filter (fun p -> containsAttribute "FromRoute" p.CustomAttributes) |> Array.length
+        let realUrlLen = requestPathSplit.Length - pathParametersLen
+        test.RequestPath <- requestPathSplit |> Seq.take realUrlLen |> fun path -> String.Join("/", path)
+    
+    // Sets crucial headers fo the request
+    // Sets Host, Content-Type, Content-Length
+    let finalizeHeaders (test: AspIntegrationTest) =
+        // Host = domain we specify at request
+        test.RequestHeaders.Add {key="Host"; value="TODO" }
+        // Content-Type = application/json if from body multipart/form if form with length specified
+        let applicationJson = "application/json"
+        let formData = "multipart/form-data"
+        let boundary = Guid.NewGuid().ToString()
+        // Each entry is key: value\r\n
+        let contentLength =
+            if test.RequestForm.Count > 0
+            then test.RequestForm.ToArray() |> Array.sumBy (fun e -> e.key.Length + e.value.Length + 4) |> (+) boundary.Length
+            else test.RequestBody.Length
+        let contentType = if test.RequestForm.Count > 0 then $"{formData}; boundary={boundary}" else applicationJson
+        test.RequestHeaders.Add {key="Content-Type"; value=contentType}
+        test.RequestHeaders.Add {key="Content-Length"; value=contentLength.ToString()}
+        

@@ -115,7 +115,7 @@ module CilState =
             /// </summary>
             internalId : uint
             webConfiguration : webConfiguration option
-            webExplorationArguments : Dictionary<ParameterInfo, term>
+            mutable webExplorationArguments : Dictionary<ParameterInfo, term>
             internalStatistics : Dictionary<Method, System.Diagnostics.Stopwatch>
         }
 

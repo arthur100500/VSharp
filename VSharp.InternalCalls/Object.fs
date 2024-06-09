@@ -15,7 +15,7 @@ module internal Object =
         | HeapRef _ -> MostConcreteTypeOfRef state t
         | _ -> TypeOf t
 
-    let rec copy state (cilState : cilState) source recursive (visited : HashSet<Type>) =
+    let rec copy state (cilState : cilState) source recursive forkOnNull (visited : HashSet<Type>) =
         let t = getTermType state source
         let copyRef (cilState : cilState) =
             let state = cilState.state
@@ -65,7 +65,7 @@ module internal Object =
                     let copyForState (cilState : cilState) =
                         let v = cilState.ReadField source field
                         visited.Add t |> ignore
-                        let copiedStates = copy state cilState v true visited
+                        let copiedStates = copy state cilState v true forkOnNull visited
                         visited.Remove t |> ignore
                         copiedStates |> List.collect (fun (s : cilState) -> s.WriteClassField newObject field (s.Pop()))
                     List.collect copyForState cilStates
@@ -76,12 +76,14 @@ module internal Object =
                 cilStates
         match source.term with
         | Ref _
-        | HeapRef _ ->
+        | HeapRef _ when forkOnNull ->
             cilState.StatedConditionalExecutionCIL
                 (fun state k -> k (IsNullReference source, state))
                 (fun (cilState : cilState) k -> NullRef t |> cilState.Push; k [cilState])
                 (fun (cilState : cilState) k -> copyRef cilState |> k)
                 id
+        | HeapRef _ ->
+            copyRef cilState
         | Union _ -> __notImplemented__()
         | _ ->
             cilState.Push source
@@ -92,8 +94,8 @@ module internal Object =
         assert(List.length args = 1)
         let object = args[0]
         let state = cilState.state
-        copy state cilState object false null
+        copy state cilState object false false null
 
-    let DeepCopy (cilState : cilState) (object : term) =
+    let DeepCopy (cilState : cilState) (object : term) (forkOnNull : bool) =
         let visited = HashSet<Type>()
-        copy cilState.state cilState object true visited
+        copy cilState.state cilState object true forkOnNull visited

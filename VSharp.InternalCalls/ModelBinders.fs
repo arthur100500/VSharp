@@ -40,5 +40,5 @@ module ModelBinders =
             cilState.Push task
             [cilState]
         else
-            let statesWithCopiedArgument = Object.DeepCopy cilState argument
+            let statesWithCopiedArgument = Object.DeepCopy cilState argument false
             statesWithCopiedArgument |> List.map returnResultInValueTask
