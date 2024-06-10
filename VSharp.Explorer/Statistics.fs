@@ -278,7 +278,7 @@ type public SVMStatistics(entryMethods : Method seq, generalizeGenericsCoverage 
         x.SetBasicBlocksAsCoveredByTest s.history |> ignore
         if s.WebExploration then
             for m in s.history do
-                if (m.method.Module.Assembly = entryMethods[0].Module.Assembly) then
+                if (m.method.Module.Assembly = s.entryMethod.Value.Module.Assembly) then
                     entryMethods.Add(m.method)
             entryMethods <- entryMethods.Where(fun x -> not x.IsEntryPoint).Distinct().ToList()
         let generatedTestInfo =

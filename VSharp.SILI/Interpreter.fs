@@ -876,14 +876,29 @@ type ILInterpreter() as this =
         Logger.trace "Starting exploration of ASP.NET application"
         Console.Clear()
         let controllersActions = x.CollectControllerActions cilState
-        let cilStates = controllersActions |> Seq.map (x.StartControllerResearch cilState args)
-        cilStates |> Seq.toList
+        let rec startForController (c : MethodInfo) =
+            let possibleMethods = x.GetHttpMethods c
+            possibleMethods |> Seq.map (x.StartControllerResearch cilState args c)
+        let cilStates = Seq.map startForController controllersActions
+        cilStates |> Seq.concat |> Seq.toList
 
     member private x.GenerateDummyPathArguments (arguments : ParameterInfo seq) =
+        let genDefault (t : ParameterInfo) = Reflection.defaultOf t.ParameterType
         let fromRouteArguments = arguments |> Seq.filter (fun a -> a.CustomAttributes |> Seq.tryFind (fun t -> t.AttributeType.Name = "FromRouteAttribute") |> Option.isSome)
-        let fromRouteArgumentsDefaults = fromRouteArguments |> Seq.map (fun _ -> "<dummy>")
+        let fromRouteArgumentsDefaults = fromRouteArguments |> Seq.map (genDefault)
         Seq.fold (fun s e -> $"{s}/{e}") "" fromRouteArgumentsDefaults
-    
+
+    member private x.GetHttpMethods (researchedControllerAction : MethodInfo) =
+        // TODO: do it better
+        // If some were found pick all of them
+        let retrievePart (s : string) = s.Split("Http") |> Seq.last |> _.Replace("Attribute", "")
+        let isHttpAttribute (x : CustomAttributeData) = x.AttributeType.Name.Contains("Http")
+        let findHttpAttributes = Seq.filter isHttpAttribute
+        let httpAttributes = researchedControllerAction.CustomAttributes |> findHttpAttributes
+        let result = httpAttributes |> Seq.map (_.AttributeType.Name) |> Seq.map retrievePart |> Seq.toList
+        if List.length result = 0 then ["GET"]
+        else result
+
     member private x.GenerateDummyControllerActionPath (researchedControllerAction : MethodInfo) =
         // TODO: Better comply with https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/routing?view=aspnetcore-8.0
         // Right now only [controller] Controller => [method/data1/data2] Method is supported
@@ -897,7 +912,7 @@ type ILInterpreter() as this =
         let dummyPayload = x.GenerateDummyPathArguments <| researchedControllerAction.GetParameters()
         $"/{controllerName}/{actionName}{dummyPayload}"
     
-    member private x.StartControllerResearch (cilState : cilState) args (researchedControllerAction : MethodInfo) =
+    member private x.StartControllerResearch (cilState : cilState) args (researchedControllerAction : MethodInfo) method =
         let controllerParameters = researchedControllerAction.GetParameters()
         let cilState = cilState.Copy(Memory.CopyState cilState.state)
         cilState.ClearStack()
@@ -914,7 +929,8 @@ type ILInterpreter() as this =
         let nones n = List.init n (fun _ -> None)
         let path = x.GenerateDummyControllerActionPath researchedControllerAction
         let pathArg = Memory.AllocateString path state
-        let parameters = [Some requestDelegate; Some iHttpContextFactory; Some pathArg; None; None] @ nones controllerParameters.Length
+        let methodArg = Memory.AllocateString method state
+        let parameters = [Some requestDelegate; Some iHttpContextFactory; Some pathArg; Some methodArg; None] @ nones controllerParameters.Length
         Memory.InitFunctionFrame state startAspNetMethod None (Some parameters)
         let controllerPropagatedParameters = startAspNetMethodInfo.GetParameters() |> Array.skip 5
         let webExplorationArguments = Array.mapi (fun i arg -> controllerParameters[i], Memory.ReadArgument state arg) controllerPropagatedParameters

@@ -705,10 +705,12 @@ module Loader =
 
             // Stream
             "System.Int64 System.IO.MemoryStream.get_Position(this)"
+            "System.Void System.IO.Pipelines.StreamPipeWriter+<FlushAsyncInternal>d__39.MoveNext(this)"
+            "System.Void System.IO.Pipelines.BufferSegment.set_End(this, System.Int32)"
+            "System.Void System.IO.StreamWriter.Flush(this)"
 
             // Encoder
             "System.Text.Encoder System.Text.UTF8Encoding.GetEncoder(this)"
-            "System.Void System.IO.StreamWriter.Flush(this)"
             "System.Threading.Tasks.ValueTask`1[System.IO.Pipelines.FlushResult] System.IO.Pipelines.StreamPipeWriter.FlushAsync(this, System.Threading.CancellationToken)"
             "System.Void System.Text.UTF8Encoding..ctor(this, System.Boolean)"
 
